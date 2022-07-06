@@ -1,0 +1,46 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+#install.packages('ecb')
+
+#### Data from ECB ####
+rm(list=ls())
+library(ecb)
+```
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+names<-list("ICP.M.FR.N.000000.4.INX", "ICP.M.FR.N.010000.4.INX", "ICP.M.FR.N.020000.4.INX", "ICP.M.FR.N.030000.4.INX", "ICP.M.FR.N.040000.4.INX",	"ICP.M.FR.N.050000.4.INX", "ICP.M.FR.N.060000.4.INX", "ICP.M.FR.N.070000.4.INX",	"ICP.M.FR.N.080000.4.INX",	"ICP.M.FR.N.090000.4.INX",	"ICP.M.FR.N.100000.4.INX",	"ICP.M.FR.N.110000.4.INX",	"ICP.M.FR.N.120000.4.INX")
+
+x<-get_data("ICP.M.FR.N.000000.4.INX",filter=list(startPeriod=2000,endPeriod=2022))
+data<-x$obstime
+for (i in names){
+  x<-get_data(i,filter=list(startPeriod=2000,endPeriod=2022))
+  data<-cbind(data,as.numeric(x$obsvalue))
+}
+
+data<-as.data.frame(data)
+names(data)<-c('Date','HICP - Overall index',	'HICP - FOOD AND NON-ALCOHOLIC BEVERAGES','HICP - ALCOHOLIC BEVERAGES, TOBACCO','HICP - CLOTHING AND FOOTWEAR','HICP - HOUSING, WATER, ELECTRICITY, GAS AND OTHER FUELS','HICP - FURNISHINGS, HOUSEHOLD EQUIPMENT AND ROUTINE HOUSE MAINTENANCE','HICP - HEALTH','HICP - TRANSPORT','HICP - COMMUNICATION','HICP - RECREATION AND CULTURE	','HICP - EDUCATION	','HICP - RESTAURANTS AND HOTELS','HICP - MISCELLANEOUS GOODS AND SERVICES')
+
+colnames(data) <- gsub('HICP - ', '', colnames(data), fixed=TRUE)
+
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+```{r}
+attach(data)
+colnames(df) <- gsub('HICP - ', '', colnames(data), fixed=TRUE)
+
+data<-as.list(data)
+plot(Date, 'HICP - ALCOHOLIC BEVERAGES, TOBACCO')
+```
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
