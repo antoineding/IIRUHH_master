@@ -1,0 +1,109 @@
+using NLsolve, Plots
+
+struct Calibration
+    σ::Float64           # elasticity of relative demand with respect to price         
+    γ::Vector{Float64}   # intensity in each good
+    ϵ::Vector{Float64}   # elasticity of relative demand with respect to income in luxury good sector
+    κ::Vector{Float64}   # For Stone and Geary
+    g::Vector{Float64}
+end
+
+cal = Calibration(
+    0.5,                    # sigma=0.5 completementary goods
+    [1/3, 1/3, 1/3],        #intensity
+    [0.6, 1.0, 1.65],       #ELASTICITIES
+    [0.05, 0.03, 0.02],     #For Stone and Geary
+    [1.05, 1.02, 1.01]      # price dynamics
+)
+
+ρ=(cal.σ-1)/cal.σ
+
+
+#Initial Price and endowment level
+p=[5.0, 10.0, 15.0]
+C_H=[5.0, 1.0, 10.0]
+C_L=[2.0, 2.0, 1.0]
+T=50
+
+#find Umax with no waste
+function solvingNH(u, C::Vector{Float64}, p::Vector{Float64}; cal=cal)
+    E=sum(p[i]*C[i] for i=1:length(C))
+    out=1-sum(cal.γ[i]^(1/cal.σ)*(((p[i]/E)^(-cal.σ)*cal.γ[i])/u^((1-cal.σ)*cal.σ*cal.ϵ[i]))^ρ for i=1:length(C))
+    return out
+end
+
+function NHUtility(C::Vector{Float64}, p::Vector{Float64} ;cal=cal,tol=1e-10,T=100)
+    res = nlsolve(u->[solvingNH(u[1], C, p)], [1.0])
+    #Utility level for given C
+    U=res.zero[1]
+
+    #Wealth and Minimum expenditure for the utility at given endowment level
+    E=sum(p[i]*C[i] for i=1:length(C))
+    ExpNH=sum(cal.γ[i]*U^(cal.ϵ[i]*cal.σ*(1-cal.σ)) * (p[i]^(1-cal.σ)) for i = 1:length(C))^(1/(1-cal.σ))
+    
+    #Optimal Demand with income effect
+    C1=cal.γ[1]*U^(cal.ϵ[1]*cal.σ*(1-cal.σ))  * (p[1]/E)^(-cal.σ)
+    C2=cal.γ[2]*U^(cal.ϵ[2]*cal.σ*(1-cal.σ))  * (p[2]/E)^(-cal.σ)
+    C3=cal.γ[3]*U^(cal.ϵ[3]*cal.σ*(1-cal.σ))  * (p[3]/E)^(-cal.σ)
+
+    #Expenditure share with income effect
+    ω_p=cal.γ[1]*U^(cal.ϵ[1]*cal.σ*(1-cal.σ))  * (p[1]/E)^(1-cal.σ)
+    ω_n=cal.γ[2]*U^(cal.ϵ[2]*cal.σ*(1-cal.σ))  * (p[2]/E)^(1-cal.σ)
+    ω_l=cal.γ[3]*U^(cal.ϵ[3]*cal.σ*(1-cal.σ))  * (p[3]/E)^(1-cal.σ)
+
+    #Optimal update for demand
+    C=[C1,C2,C3]
+    ω=[ω_p, ω_n, ω_l]
+
+    return [ C1, C2, C3, U]#, U, E, ω]
+
+end
+
+
+p=[1.0, 1.0, 1.0];
+C_H=[10.0, 10.0, 10.0];
+C_L=[1.0, 1.0, 1.0];
+T=50
+
+NHUtility(C_H, p)
+NHUtility(C_L, p)
+
+tol=1e-10
+ex_v=[]
+for i = 1:length(C_H)
+    endowment=C_H[i] + C_L[i]
+    demand = NHUtility(C_H, p)[i]+NHUtility(C_L, p)[i]
+    excess= demand-endowment
+    ex_v=push!(ex_v, excess)
+end
+
+for j=1:length(C_H)
+    t=0
+    while abs(ex_v[j])>tol
+        for i=1:length(C_H)
+            p[i]=p[i]+0.01*ex_v[i]
+        end
+        ex_v=[]
+        for i = 1:length(C_H)
+            endowment=C_H[i] + C_L[i]
+            demand = NHUtility(C_H, p)[i]+NHUtility(C_L, p)[i]
+            excess= demand-endowment
+            ex_v=push!(ex_v, excess)
+        end
+    end
+end
+p
+
+endow=[]
+de=[]
+for i = 1:length(C_H)
+    endowment=C_H[i] + C_L[i]
+    demand = NHUtility(C_H, p)[i]+NHUtility(C_L, p)[i]
+    endow=push!(endow, endowment)
+    de=push!(de, demand)
+end
+
+endow
+de
+NHUtility(C_H, p)
+NHUtility(C_L, p)
