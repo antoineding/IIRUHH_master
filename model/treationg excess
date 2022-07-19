@@ -1,4 +1,23 @@
-using NLsolve, Plots
+using NLsolve, Plots, Distributions, StatsPlots
+
+Endow=[]
+for i = 1:sca
+    for j=1:sca
+        for k =1:sca
+            Endow=push!(Endow, [i, j, k])
+        end
+    end
+end
+
+NHUtility(Endow[1,:][1],p)
+W=zeros(ng,1)
+
+for i= 1:ng
+        W[i,1]=sum(G[i,j] for j = 1:na)
+end
+
+Excess
+
 
 struct Calibration
     σ::Float64           # elasticity of relative demand with respect to price         
@@ -20,6 +39,7 @@ cal = Calibration(
 
 
 #Initial Price and endowment level
+
 p=[5.0, 10.0, 15.0]
 C_H=[5.0, 1.0, 10.0]
 C_L=[2.0, 2.0, 1.0]
