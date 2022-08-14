@@ -1,5 +1,6 @@
 [deps]
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 NLsolve = "2774e3e8-f4cf-5e23-947b-6d7e65073b56"
 Parameters = "d96e819e-fc66-5662-9728-84c9c7592b0a"
