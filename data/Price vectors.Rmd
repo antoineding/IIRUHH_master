@@ -18,26 +18,32 @@ Try executing this chunk by clicking the *Run* button within the chunk or by pla
 names<-list("ICP.M.FR.N.000000.4.INX", "ICP.M.FR.N.010000.4.INX", "ICP.M.FR.N.020000.4.INX", "ICP.M.FR.N.030000.4.INX", "ICP.M.FR.N.040000.4.INX",	"ICP.M.FR.N.050000.4.INX", "ICP.M.FR.N.060000.4.INX", "ICP.M.FR.N.070000.4.INX",	"ICP.M.FR.N.080000.4.INX",	"ICP.M.FR.N.090000.4.INX",	"ICP.M.FR.N.100000.4.INX",	"ICP.M.FR.N.110000.4.INX",	"ICP.M.FR.N.120000.4.INX")
 
 x<-get_data("ICP.M.FR.N.000000.4.INX",filter=list(startPeriod=2000,endPeriod=2022))
-data<-x$obstime
+data=data.frame(as.Date(paste(x$obstime,1,sep="-"),"%Y-%m-%d"))
+
 for (i in names){
   x<-get_data(i,filter=list(startPeriod=2000,endPeriod=2022))
-  data<-cbind(data,as.numeric(x$obsvalue))
+  data<-cbind(data,x$obsvalue)
 }
 
-data<-as.data.frame(data)
 names(data)<-c('Date','HICP - Overall index',	'HICP - FOOD AND NON-ALCOHOLIC BEVERAGES','HICP - ALCOHOLIC BEVERAGES, TOBACCO','HICP - CLOTHING AND FOOTWEAR','HICP - HOUSING, WATER, ELECTRICITY, GAS AND OTHER FUELS','HICP - FURNISHINGS, HOUSEHOLD EQUIPMENT AND ROUTINE HOUSE MAINTENANCE','HICP - HEALTH','HICP - TRANSPORT','HICP - COMMUNICATION','HICP - RECREATION AND CULTURE	','HICP - EDUCATION	','HICP - RESTAURANTS AND HOTELS','HICP - MISCELLANEOUS GOODS AND SERVICES')
 
 colnames(data) <- gsub('HICP - ', '', colnames(data), fixed=TRUE)
-
 ```
 
 Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
 ```{r}
-attach(data)
-colnames(df) <- gsub('HICP - ', '', colnames(data), fixed=TRUE)
+library(ggplot2)
+library(reshape2)
+library(dplyr)
 
-data<-as.list(data)
-plot(Date, 'HICP - ALCOHOLIC BEVERAGES, TOBACCO')
+d <- melt(data, id.vars="Date")
+d<-d %>%
+    group_by(variable) %>%
+    mutate(VAL.IND = value/value[Date=="2000-01-01"])
+
+ggplot(d, aes(x=Date,y=VAL.IND, col=variable)) + 
+  geom_path()+
+  theme(legend.position = "none")
 ```
 
 When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
