@@ -25,7 +25,7 @@ for (i in names){
   data<-cbind(data,x$obsvalue)
 }
 
-names(data)<-c('Date','HICP - Overall index',	'HICP - FOOD AND NON-ALCOHOLIC BEVERAGES','HICP - ALCOHOLIC BEVERAGES, TOBACCO','HICP - CLOTHING AND FOOTWEAR','HICP - HOUSING, WATER, ELECTRICITY, GAS AND OTHER FUELS','HICP - FURNISHINGS, HOUSEHOLD EQUIPMENT AND ROUTINE HOUSE MAINTENANCE','HICP - HEALTH','HICP - TRANSPORT','HICP - COMMUNICATION','HICP - RECREATION AND CULTURE	','HICP - EDUCATION	','HICP - RESTAURANTS AND HOTELS','HICP - MISCELLANEOUS GOODS AND SERVICES')
+names(data)<-c('Date','HICP - Overall index',	'HICP - FOOD','HICP - ALCOHOL, TOBACCO','HICP - CLOTHING','HICP - ELECTRICITY, GAS','HICP - FURNISHINGS','HICP - HEALTH','HICP - TRANSPORT','HICP - COMMUNICATION','HICP - RECREATION	','HICP - EDUCATION	','HICP - RESTAURANTS','HICP - MISCELLANEOUS')
 
 colnames(data) <- gsub('HICP - ', '', colnames(data), fixed=TRUE)
 ```
@@ -42,11 +42,69 @@ d<-d %>%
     mutate(VAL.IND = value/value[Date=="2000-01-01"])
 
 ggplot(d, aes(x=Date,y=VAL.IND, col=variable)) + 
-  geom_path()+
-  theme(legend.position = "none")
+  geom_path()
 ```
 
-When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
 
-The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+```{r}
+library(readxl)
+average_con <- read_excel("average_con.xlsx", 
+    sheet = "Sheet 1")
+
+colnames(average_con)<-c("Date","Type","Value")
+average_con[,1]<-as.Date(average_con$Date, "%Y")
+average_con[,3]<-as.numeric(average_con$Value)
+
+cons_per_decile <- read_excel("cons_per_decile.xlsx", 
+    sheet = "Feuil1")
+```
+
+
+```{r}
+average_con<-average_con %>% filter(Type!="Total")
+average_con<-average_con %>% filter(Date!="2021-08-25")
+
+ggplot(average_con, aes(fill=Type, y=Value, x=Date)) + 
+  geom_bar(position="stack", stat="identity")
+```
+
+```{r}
+colnames(cons_per_decile)<-c("Type","income_grp","s_1999","s_2005","s_2010","s_2015")
+d<-cons_per_decile %>%
+    group_by(income_grp) %>%
+    mutate(Somme_1999 = sum(s_1999), Somme_2005=sum(s_2005), Somme_2010=sum(s_2010), Somme_2015=sum(s_2015))
+
+share<-d %>%
+  group_by(income_grp) %>%
+  summarize(Type=Type, s_1999/Somme_1999, s_2005/Somme_2005, s_2010/Somme_2010, s_2015/Somme_2015 )
+
+colnames(share)<-c("income_grp","Type","s_1999","s_2005","s_2010","s_2015")
+```
+
+
+```{r}
+library(tidyr)
+first<-data_long %>%
+  filter(Date=="s_1999")
+second<-data_long %>%
+  filter(Date=="s_2005")
+third<-data_long %>%
+  filter(Date=="s_2010")
+fourth<-data_long %>%
+  filter(Date=="s_2015")
+
+data_long <- gather(share, Date, value, s_1999:s_2015, factor_key=TRUE)
+
+ggplot(first, aes(fill=Type, y=value, x=income_grp)) + 
+  geom_bar(position="stack", stat="identity")
+
+ggplot(second, aes(fill=Type, y=value, x=income_grp)) + 
+  geom_bar(position="stack", stat="identity")
+ggplot(third, aes(fill=Type, y=value, x=income_grp)) + 
+  geom_bar(position="stack", stat="identity")
+ggplot(fourth, aes(fill=Type, y=value, x=income_grp)) + 
+  geom_bar(position="stack", stat="identity")
+
+```
+
 
