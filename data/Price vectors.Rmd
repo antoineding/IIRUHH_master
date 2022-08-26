@@ -64,9 +64,31 @@ cons_per_decile <- read_excel("cons_per_decile.xlsx",
 average_con<-average_con %>% filter(Type!="Total")
 average_con<-average_con %>% filter(Date!="2021-08-25")
 
+average_con$Type <- sapply(average_con$Type, switch, 
+                      "Food and non-alcoholic beverages"="FOOD",
+                      "Alcoholic beverages, tobacco and narcotics"="ALCOHOL, TOBACCO",
+                      "Clothing and footwear"="CLOTHING",
+                      "Housing, water, electricity, gas and other fuels"="ELECTRICITY, GAS",
+                      "Furnishings, household equipment and routine household maintenance"="FURNISHINGS",
+                      "Health"="HEALTH",
+                      "Transport"="TRANSPORT",
+                      "Communications"="COMMUNICATION",
+                      "Recreation and culture" ="RECREATION",
+                      "Education"="EDUCATION",
+                      "Restaurants and hotels"="RESTAURANTS",
+                      "Miscellaneous goods and services"="MISCELLANEOUS",
+)
+   
+
+png(file="cons_average.png")              
 ggplot(average_con, aes(fill=Type, y=Value, x=Date)) + 
-  geom_bar(position="stack", stat="identity")
+  geom_bar(position="stack", stat="identity")+
+  theme_bw()+
+  labs(y="Share", title = "Consumption share average household")+
+  scale_fill_brewer(palette="Set3")
+dev.off()
 ```
+
 
 ```{r}
 colnames(cons_per_decile)<-c("Type","income_grp","s_1999","s_2005","s_2010","s_2015")
@@ -79,31 +101,43 @@ share<-d %>%
   summarize(Type=Type, s_1999/Somme_1999, s_2005/Somme_2005, s_2010/Somme_2010, s_2015/Somme_2015 )
 
 colnames(share)<-c("income_grp","Type","s_1999","s_2005","s_2010","s_2015")
-```
+d <- melt(share, id.vars=c("Type","income_grp"))
+d$variable <- gsub('s_', '', d$variable, fixed=TRUE)
 
+colnames(d)<-c("Type", "income_grp", "Date", "Value")
 
-```{r}
-library(tidyr)
-first<-data_long %>%
-  filter(Date=="s_1999")
-second<-data_long %>%
-  filter(Date=="s_2005")
-third<-data_long %>%
-  filter(Date=="s_2010")
-fourth<-data_long %>%
-  filter(Date=="s_2015")
+d$Quintile <- sapply(d$income_grp, switch, 
+                     "First quintile"=1,
+                     "Second quintile"=2,
+                     "Third quintile"=3,
+                     "Fourth quintile"=4,
+                     "Fifth quintile"=5,
+)
 
-data_long <- gather(share, Date, value, s_1999:s_2015, factor_key=TRUE)
+d$Type <- sapply(d$Type, switch, 
+                      "Food and non-alcoholic beverages"="FOOD",
+                      "Alcoholic beverages, tobacco and narcotics"="ALCOHOL, TOBACCO",
+                      "Clothing and footwear"="CLOTHING",
+                      "Housing, water, electricity, gas and other fuels"="ELECTRICITY, GAS",
+                      "Furnishings, household equipment and routine household maintenance"="FURNISHINGS",
+                      "Health"="HEALTH",
+                      "Transport"="TRANSPORT",
+                      "Communications"="COMMUNICATION",
+                      "Recreation and culture" ="RECREATION",
+                      "Education"="EDUCATION",
+                      "Miscellaneous goods and services"="MISCELLANEOUS",
+)
+d <- d[order(d$Quintile),]                                            
 
-ggplot(first, aes(fill=Type, y=value, x=income_grp)) + 
-  geom_bar(position="stack", stat="identity")
-
-ggplot(second, aes(fill=Type, y=value, x=income_grp)) + 
-  geom_bar(position="stack", stat="identity")
-ggplot(third, aes(fill=Type, y=value, x=income_grp)) + 
-  geom_bar(position="stack", stat="identity")
-ggplot(fourth, aes(fill=Type, y=value, x=income_grp)) + 
-  geom_bar(position="stack", stat="identity")
+png("cons_per_quintile.png", res=300)
+ggplot(d, aes(fill=Type, y=Value, x=Quintile)) + 
+  geom_bar(position="stack", stat="identity")+
+  facet_grid(~ Date)+
+  theme_bw()+
+  labs(y="Share","Consumption share over time per quintile")+
+  scale_y_continuous(labels = scales::percent)+
+  scale_fill_brewer(palette="Paired")
+dev.off()
 
 ```
 
