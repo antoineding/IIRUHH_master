@@ -35,13 +35,20 @@ Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by press
 library(ggplot2)
 library(reshape2)
 library(dplyr)
+library(tidyverse)
 
 d <- melt(data, id.vars="Date")
 d<-d %>%
     group_by(variable) %>%
     mutate(VAL.IND = value/value[Date=="2000-01-01"])
 
-ggplot(d, aes(x=Date,y=VAL.IND, col=variable)) + 
+d<-d %>%
+  group_by(variable, Year=cut(Date, "year"))%>%
+  mutate(mean_val=mean(VAL.IND))
+
+colnames(d)<-c("Date","Type","value","VAL.IND","Year","mean_val")
+d$Year<-as.Date(d$Year)
+ggplot(d, aes(x=Year,y=mean_val, col=Type)) + 
   geom_path()
 ```
 
@@ -79,6 +86,13 @@ average_con$Type <- sapply(average_con$Type, switch,
                       "Miscellaneous goods and services"="MISCELLANEOUS",
 )
    
+
+average_con<-average_con %>%
+  group_by(Type, y=cut(Date, "year"))%>%
+  mutate(mean_val=mean(Value))
+
+
+total <- merge(ddata frameB,by=c("Type","Date")
 
 png(file="cons_average.png")              
 ggplot(average_con, aes(fill=Type, y=Value, x=Date)) + 
@@ -129,7 +143,7 @@ d$Type <- sapply(d$Type, switch,
 )
 d <- d[order(d$Quintile),]                                            
 
-png("cons_per_quintile.png", res=300)
+png("cons_per_quintile.png")
 ggplot(d, aes(fill=Type, y=Value, x=Quintile)) + 
   geom_bar(position="stack", stat="identity")+
   facet_grid(~ Date)+
@@ -138,6 +152,7 @@ ggplot(d, aes(fill=Type, y=Value, x=Quintile)) +
   scale_y_continuous(labels = scales::percent)+
   scale_fill_brewer(palette="Paired")
 dev.off()
+dev.set(dev.next())
 
 ```
 
