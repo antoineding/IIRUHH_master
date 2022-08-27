@@ -1,6 +1,5 @@
 ---
-title: "R Notebook"
-output: html_notebook
+title: R Notebook HICP and Consumption share
 ---
 ```{r}
 #install.packages('ecb')
@@ -8,12 +7,12 @@ output: html_notebook
 #### Data from ECB ####
 rm(list=ls())
 library(ecb)
+library(ggplot2)
+library(reshape2)
+library(dplyr)
+library(tidyverse)
 ```
-
-This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
-
-Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
-
+LOAD DATA from ECB SDW
 ```{r}
 names<-list("ICP.M.FR.N.000000.4.INX", "ICP.M.FR.N.010000.4.INX", "ICP.M.FR.N.020000.4.INX", "ICP.M.FR.N.030000.4.INX", "ICP.M.FR.N.040000.4.INX",	"ICP.M.FR.N.050000.4.INX", "ICP.M.FR.N.060000.4.INX", "ICP.M.FR.N.070000.4.INX",	"ICP.M.FR.N.080000.4.INX",	"ICP.M.FR.N.090000.4.INX",	"ICP.M.FR.N.100000.4.INX",	"ICP.M.FR.N.110000.4.INX",	"ICP.M.FR.N.120000.4.INX")
 
@@ -32,24 +31,36 @@ colnames(data) <- gsub('HICP - ', '', colnames(data), fixed=TRUE)
 
 Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
 ```{r}
-library(ggplot2)
-library(reshape2)
-library(dplyr)
-library(tidyverse)
 
 d <- melt(data, id.vars="Date")
-d<-d %>%
+monthly<-d %>%
     group_by(variable) %>%
-    mutate(VAL.IND = value/value[Date=="2000-01-01"])
+    mutate(VAL.IND = value/value[Date=="2000-01-01"])%>%
+    mutate(Year=cut(Date,"year"))
+  
+log_month<- monthly %>%
+  group_by(variable)%>%
+  mutate(log_v=c(NA,diff(log(VAL.IND))))
 
-d<-d %>%
-  group_by(variable, Year=cut(Date, "year"))%>%
-  mutate(mean_val=mean(VAL.IND))
+annual<-monthly %>%
+  group_by(Year, variable)%>%
+  filter(row_number()==1)
 
-colnames(d)<-c("Date","Type","value","VAL.IND","Year","mean_val")
-d$Year<-as.Date(d$Year)
-ggplot(d, aes(x=Year,y=mean_val, col=Type)) + 
+log_annual<- annual %>%
+  group_by(variable)%>%
+  mutate(log_v=c(NA,diff(log(VAL.IND))))
+
+ggplot(monthly, aes(x=Date,y=VAL.IND, col=variable)) + 
   geom_path()
+ggplot(log_month, aes(x=Date,y=log_v, col=variable)) + 
+  geom_path()
+
+ggplot(annual, aes(x=Date,y=VAL.IND, col=variable)) + 
+  geom_path()
+ggplot(log_annual, aes(x=Date,y=log_v, col=variable)) + 
+  geom_path()
+
+
 ```
 
 
@@ -91,8 +102,6 @@ average_con<-average_con %>%
   group_by(Type, y=cut(Date, "year"))%>%
   mutate(mean_val=mean(Value))
 
-
-total <- merge(ddata frameB,by=c("Type","Date")
 
 png(file="cons_average.png")              
 ggplot(average_con, aes(fill=Type, y=Value, x=Date)) + 
@@ -141,19 +150,63 @@ d$Type <- sapply(d$Type, switch,
                       "Education"="EDUCATION",
                       "Miscellaneous goods and services"="MISCELLANEOUS",
 )
-d <- d[order(d$Quintile),]                                            
+quintile_exposure <- d[order(d$Quintile),]                                            
+quintile_exposure$Date<-as.Date(quintile_exposure$Date, format='%Y')
+quintile_exposure$Date <- sub('-08-27', '-01-01', quintile_exposure$Date, fixed=TRUE)
+quintile_exposure$Date <- sub('1999', '2000', quintile_exposure$Date, fixed=TRUE)
 
+```
+
+```{r}
 png("cons_per_quintile.png")
 ggplot(d, aes(fill=Type, y=Value, x=Quintile)) + 
   geom_bar(position="stack", stat="identity")+
   facet_grid(~ Date)+
   theme_bw()+
-  labs(y="Share","Consumption share over time per quintile")+
+  labs(y="Share","Consumption share over time per quintile", 
+       title="Consumption share EA by quintile and year",
+       caption = "Author's calculation, Eurostat consumption expenditure by income quintile and COICOP")+ 
   scale_y_continuous(labels = scales::percent)+
   scale_fill_brewer(palette="Paired")
 dev.off()
-dev.set(dev.next())
+```
+Construct average weighted price index.
 
+```{r}
+colnames(log_annual)<-c("Date","Type","value","Valueindex","y","log_v")
+
+pricequantity <- log_annual %>% right_join(average_con, by=c("Type","y"))
+
+pq<-pricequantity %>%
+  group_by(y) %>%
+  mutate(exposure=sum(Valueindex*Value, na.rm=TRUE))
+
+pq<-pq %>%
+    group_by(Type)%>%
+    mutate(exposure_average = exposure/exposure[Date.x=="2000-01-01"])
+
+pq<-pq %>% filter(between(Date.x, as.Date('2000-01-01'), as.Date('2020-12-31')))
+
+ggplot(pq, aes(x=Date.x,y=exposure_average, col=Type)) + 
+  geom_path()
+```
+
+
+Construct per decile weighted price index.
+```{r}
+log_annual$Date<-as.character(log_annual$Date)
+total_quintile<-log_annual %>% right_join(quintile_exposure, by=c("Date","Type"))
+
+pq_quintile<-total_quintile %>%
+  group_by(Date, income_grp) %>%
+  mutate(exposure=sum(Valueindex*Value, na.rm=TRUE))
+
+pq_quintile<-pq_quintile %>%
+    group_by(income_grp)%>%
+    mutate(exposure_average = exposure/exposure[Date=="2000-01-01"])
+
+ggplot(pq_quintile, aes(x=as.Date(Date),y=exposure_average, col=income_grp)) + 
+  geom_path()
 ```
 
 
