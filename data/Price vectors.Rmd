@@ -246,7 +246,7 @@ pq_quintile<-pq_quintile %>%
 pq_quintile <- pq_quintile[order(pq_quintile$Quintile),]                                            
 
 png("Pindex_quintile.png")
-p3<-ggplot(pq_quintile, aes(x=as.Date(Date, "%Y"),y=exposure_average, col=Quintile)) + 
+ggplot(pq_quintile, aes(x=as.Date(Date, "%Y"),y=exposure_average, col=Quintile)) + 
   geom_line()+
   labs(x="Date",y="Price index", title="5year price index by quintile", caption="ECB SDW and Eurostat COICOP, Author's calculation")+
   theme_bw()
@@ -292,7 +292,7 @@ d$city_type <- sapply(d$city_type, switch,
                       "Towns and suburbs"="Suburbs",)           
 #Plots
 png("cons_per_city.png")
-p4<-ggplot(d, aes(fill=Type, y=Value, x=city_type)) + 
+ggplot(d, aes(fill=Type, y=Value, x=city_type)) + 
   geom_bar(position="stack", stat="identity")+
   facet_grid(~ Date)+
   theme_bw()+
@@ -324,7 +324,7 @@ pq_city<-pq_city %>%
 pq_city <- pq_city[order(pq_city$city_type),]                                            
 
 png("Pindex_city.png")
-p5<-ggplot(pq_city, aes(x=as.Date(Date, "%Y"), y=exposure_average, col=city_type)) + 
+ggplot(pq_city, aes(x=as.Date(Date, "%Y"), y=exposure_average, col=city_type)) + 
   geom_line()+
   labs(x="Date",y="Price index", title="5year price index by degree of urbanisation", 
        col='Urbanisation',
@@ -332,7 +332,6 @@ p5<-ggplot(pq_city, aes(x=as.Date(Date, "%Y"), y=exposure_average, col=city_type
        )+
   theme_bw()
 dev.off()
-p5
 ```
 
 Cons per purpose by csp
@@ -376,11 +375,11 @@ d$CSP_WORK <- sapply(d$CSP_WORK, switch,
                  
 #Plots
 png("cons_per_csp.png")
-p6<-ggplot(d, aes(fill=Type, y=Value, x=CSP_WORK)) + 
+ggplot(d, aes(fill=Type, y=Value, x=CSP_WORK)) + 
   geom_bar(position="stack", stat="identity")+
   facet_grid(~ Date)+
   theme_bw()+
-  labs(y="Share","Consumption share over time per city type", 
+  labs(y="Share", x="Activity status", 
        title="Consumption share France by work and year",
        caption = "Author's calculation, Eurostat consumption expenditure by income city type and COICOP")+ 
   scale_y_continuous(labels = scales::percent)+
@@ -409,12 +408,11 @@ pq_csp<-pq_csp %>%
 pq_csp <- pq_csp[order(pq_csp$CSP_WORK),]                                            
 
 png("Pindex_csp.png")
-p7<-ggplot(pq_csp, aes(x=as.Date(Date, "%Y"), y=exposure_average, col=CSP_WORK)) + 
+ggplot(pq_csp, aes(x=as.Date(Date, "%Y"), y=exposure_average, col=CSP_WORK)) + 
   geom_line()+
-  labs(x="Date",y="Price index", title="5year price index by activity status in France", caption="ECB SDW and Eurostat COICOP, Author's calculation")+
+  labs(x="Date",y="Price index", title="5year price index by activity status in France", caption="ECB SDW and Eurostat COICOP, Author's calculation", col="Activity Status")+
   theme_bw()
 dev.off()
-p7
 ```
 CONS SHARE PER AGE
 ```{r}
@@ -461,7 +459,7 @@ ggplot(d, aes(fill=Type, y=Value, x=AGE_RANGE)) +
   geom_bar(position="stack", stat="identity")+
   facet_grid(~ Date)+
   theme_bw()+
-  labs(y="Share","Consumption share over time per city type", 
+  labs(y="Share",x="Age range", 
        title="Consumption share France by age range and year",
        caption = "Author's calculation, Eurostat consumption expenditure by income city type and COICOP")+ 
   scale_y_continuous(labels = scales::percent)+
@@ -491,7 +489,7 @@ pq_age <- pq_age[order(pq_age$AGE_RANGE),]
 png("Pindex_age.png")
 ggplot(pq_age, aes(x=as.Date(Date, "%Y"), y=exposure_average, col=AGE_RANGE)) + 
   geom_line()+
-  labs(x="Date",y="Price index", title="5year price index by age in France", caption="ECB SDW and Eurostat COICOP, Author's calculation")+
+  labs(x="Date",y="Price index", title="5year price index by age in France", caption="ECB SDW and Eurostat COICOP, Author's calculation", col= "Age range")+
   theme_bw()
 dev.off()
 ```
