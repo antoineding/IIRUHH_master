@@ -106,7 +106,7 @@ Obtain consumption share for the average household.
 
 ```{r}
 average_con<-average_con %>% filter(Type!="Total")
-average_con<-average_con %>% filter(Date!="2021-08-25")
+average_con<-average_con %>% filter(Date!="2021-09-03")
 
 average_con$Type <- sapply(average_con$Type, switch, 
                       "Food and non-alcoholic beverages"="FOOD",
@@ -177,17 +177,12 @@ d$Type <- sapply(d$Type, switch,
                       "Restaurants and hotels"="RESTAURANTS",
                       "Miscellaneous goods and services"="MISCELLANEOUS",
 )
-quintile_exposure <- d[order(d$Quintile),]                                            
-quintile_exposure$Date<-as.Date(quintile_exposure$Date, format='%Y')
-quintile_exposure$Date <- sub('-09-03', '-01-01', quintile_exposure$Date, fixed=TRUE)
-quintile_exposure$Date <- sub('1999', '2000', quintile_exposure$Date, fixed=TRUE)
-
 ```
 
 Graph plot for consumption share per purpose by quintile.
 ```{r}
 png("cons_per_quintile.png")
-ggplot(d, aes(fill=Type, y=Value, x=Quintile)) + 
+p1<-ggplot(d, aes(fill=Type, y=Value, x=Quintile)) + 
   geom_bar(position="stack", stat="identity")+
   facet_grid(~ Date)+
   theme_bw()+
@@ -197,6 +192,7 @@ ggplot(d, aes(fill=Type, y=Value, x=Quintile)) +
   scale_y_continuous(labels = scales::percent)+
   scale_fill_brewer(palette="Paired")
 dev.off()
+p1
 ```
 Compute the average consumption expenditure household weighted price index.
 
@@ -209,24 +205,34 @@ pq<-pricequantity %>%
   group_by(y) %>%
   mutate(exposure=sum(Valueindex*Value, na.rm=TRUE))
 
+pq$Date.x <- gsub('-01-01', '', pq$Date.x, fixed=TRUE)
+
 pq<-pq %>%
     group_by(Type)%>%
-    mutate(exposure_average = exposure/exposure[Date.x=="2000-01-01"])
+    mutate(exposure_average = exposure/exposure[Date.x=="2000"])
 
-pq$Date.x<-as.Date(pq$Date.x)
+pq$Date.x<-as.Date(pq$Date.x, "%Y")
 pq<-pq %>% filter(between(Date.x, as.Date('2000-01-01'), as.Date('2020-12-31')))
 
 png("Annual_PIndex.png")
-ggplot(pq, aes(x=Date.x,y=exposure_average, col=Type)) + 
+p2<-ggplot(pq, aes(x=Date.x,y=exposure_average, col=Type)) + 
   geom_path()+
   labs(x="Date",y="Price index", title="Annual price index for average household", caption="ECB SDW and Eurostat COICOP, Author's calculation")+
   theme_bw()
 dev.off()
-  
+  p2
 ```
 Compute the consumption expenditure per purpose per quintile weighted price index.
 ```{r}
+quintile_exposure <- d[order(d$Quintile),]                                            
+quintile_exposure$Date<-as.Date(quintile_exposure$Date, format='%Y')
+quintile_exposure$Date <- sub('-09-03', '', quintile_exposure$Date, fixed=TRUE)
+quintile_exposure$Date <- sub('1999', '2000', quintile_exposure$Date, fixed=TRUE)
+
+
 log_annual$Date<-as.character(log_annual$Date)
+log_annual$Date <- gsub('-01-01', '', log_annual$Date, fixed=TRUE)
+
 total_quintile<-log_annual %>% right_join(quintile_exposure, by=c("Date","Type"))
 
 pq_quintile<-total_quintile %>%
@@ -235,16 +241,17 @@ pq_quintile<-total_quintile %>%
 
 pq_quintile<-pq_quintile %>%
     group_by(income_grp)%>%
-    mutate(exposure_average = exposure/exposure[Date=="2000-01-01"])
+    mutate(exposure_average = exposure/exposure[Date=="2000"])
 
 pq_quintile <- pq_quintile[order(pq_quintile$Quintile),]                                            
 
 png("Pindex_quintile.png")
-ggplot(pq_quintile, aes(x=as.Date(Date),y=exposure_average, col=Quintile)) + 
+p3<-ggplot(pq_quintile, aes(x=as.Date(Date, "%Y"),y=exposure_average, col=Quintile)) + 
   geom_line()+
   labs(x="Date",y="Price index", title="5year price index by quintile", caption="ECB SDW and Eurostat COICOP, Author's calculation")+
   theme_bw()
 dev.off()
+p3
 ```
 
 City type consumption heteroegeneity
@@ -278,19 +285,25 @@ d$Type <- sapply(d$Type, switch,
                       "Education"="EDUCATION",
                       "Restaurants and hotels"="RESTAURANTS",
                       "Miscellaneous goods and services"="MISCELLANEOUS",)
-                 
+
+d$city_type <- sapply(d$city_type, switch, 
+                      "Cities"="City",
+                      "Rural areas"="Rural",
+                      "Towns and suburbs"="Suburbs",)           
 #Plots
 png("cons_per_city.png")
-ggplot(d, aes(fill=Type, y=Value, x=city_type)) + 
+p4<-ggplot(d, aes(fill=Type, y=Value, x=city_type)) + 
   geom_bar(position="stack", stat="identity")+
   facet_grid(~ Date)+
   theme_bw()+
-  labs(y="Share","Consumption share over time per city type", 
-       title="Consumption share EA by city type and year",
-       caption = "Author's calculation, Eurostat consumption expenditure by income city type and COICOP")+ 
+  labs(y="Share",x="Urbanisation type", 
+       title="Consumption share EA by urbanisation degree and year",
+       caption = "Author's calculation, Eurostat consumption expenditure by income city type and COICOP",
+       fill="Type")+ 
   scale_y_continuous(labels = scales::percent)+
   scale_fill_brewer(palette="Paired")
 dev.off()
+p4
 ```
 
 ```{r}
@@ -311,11 +324,15 @@ pq_city<-pq_city %>%
 pq_city <- pq_city[order(pq_city$city_type),]                                            
 
 png("Pindex_city.png")
-ggplot(pq_city, aes(x=as.Date(Date, "%Y"), y=exposure_average, col=city_type)) + 
+p5<-ggplot(pq_city, aes(x=as.Date(Date, "%Y"), y=exposure_average, col=city_type)) + 
   geom_line()+
-  labs(x="Date",y="Price index", title="5year price index by degree of urbanisation", caption="ECB SDW and Eurostat COICOP, Author's calculation")+
+  labs(x="Date",y="Price index", title="5year price index by degree of urbanisation", 
+       col='Urbanisation',
+       caption="ECB SDW and Eurostat COICOP, Author's calculation"
+       )+
   theme_bw()
 dev.off()
+p5
 ```
 
 Cons per purpose by csp
@@ -359,7 +376,7 @@ d$CSP_WORK <- sapply(d$CSP_WORK, switch,
                  
 #Plots
 png("cons_per_csp.png")
-ggplot(d, aes(fill=Type, y=Value, x=CSP_WORK)) + 
+p6<-ggplot(d, aes(fill=Type, y=Value, x=CSP_WORK)) + 
   geom_bar(position="stack", stat="identity")+
   facet_grid(~ Date)+
   theme_bw()+
@@ -369,6 +386,7 @@ ggplot(d, aes(fill=Type, y=Value, x=CSP_WORK)) +
   scale_y_continuous(labels = scales::percent)+
   scale_fill_brewer(palette="Paired")
 dev.off()
+p6
 ```
 Price index by CSP
 ```{r}
@@ -391,12 +409,14 @@ pq_csp<-pq_csp %>%
 pq_csp <- pq_csp[order(pq_csp$CSP_WORK),]                                            
 
 png("Pindex_csp.png")
-ggplot(pq_csp, aes(x=as.Date(Date, "%Y"), y=exposure_average, col=CSP_WORK)) + 
+p7<-ggplot(pq_csp, aes(x=as.Date(Date, "%Y"), y=exposure_average, col=CSP_WORK)) + 
   geom_line()+
   labs(x="Date",y="Price index", title="5year price index by activity status in France", caption="ECB SDW and Eurostat COICOP, Author's calculation")+
   theme_bw()
 dev.off()
+p7
 ```
+CONS SHARE PER AGE
 ```{r}
 colnames(cons_per_age)<-c("Type","AGE_RANGE","s_1999","s_2005","s_2010","s_2015")
 d<-cons_per_age %>%
@@ -446,5 +466,32 @@ ggplot(d, aes(fill=Type, y=Value, x=AGE_RANGE)) +
        caption = "Author's calculation, Eurostat consumption expenditure by income city type and COICOP")+ 
   scale_y_continuous(labels = scales::percent)+
   scale_fill_brewer(palette="Paired")
+dev.off()
+```
+Price index for age
+```{r}
+log_annual$Date<-as.character(log_annual$Date)
+
+log_annual$Date <- sub('-01-01', '', log_annual$Date, fixed=TRUE)
+d$Date <- sub('1999', '2000', d$Date, fixed=TRUE)
+
+colnames(log_annual)<-c("Date","Type","value","Valueindex","y","log_v")
+total_age<-log_annual %>% right_join(d, by=c("Date","Type"))
+
+pq_age<-total_age %>%
+  group_by(Date, AGE_RANGE) %>%
+  mutate(exposure=sum(Valueindex*Value, na.rm=TRUE))
+
+pq_age<-pq_age %>%
+    group_by(AGE_RANGE)%>%
+    mutate(exposure_average = exposure/exposure[Date=="2000"])
+
+pq_age <- pq_age[order(pq_age$AGE_RANGE),]                                            
+
+png("Pindex_age.png")
+ggplot(pq_age, aes(x=as.Date(Date, "%Y"), y=exposure_average, col=AGE_RANGE)) + 
+  geom_line()+
+  labs(x="Date",y="Price index", title="5year price index by age in France", caption="ECB SDW and Eurostat COICOP, Author's calculation")+
+  theme_bw()
 dev.off()
 ```
