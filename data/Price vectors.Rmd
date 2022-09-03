@@ -15,11 +15,11 @@ LOAD DATA from ECB SDW
 ```{r}
 names<-list("ICP.M.FR.N.000000.4.INX", "ICP.M.FR.N.010000.4.INX", "ICP.M.FR.N.020000.4.INX", "ICP.M.FR.N.030000.4.INX", "ICP.M.FR.N.040000.4.INX",	"ICP.M.FR.N.050000.4.INX", "ICP.M.FR.N.060000.4.INX", "ICP.M.FR.N.070000.4.INX",	"ICP.M.FR.N.080000.4.INX",	"ICP.M.FR.N.090000.4.INX",	"ICP.M.FR.N.100000.4.INX",	"ICP.M.FR.N.110000.4.INX",	"ICP.M.FR.N.120000.4.INX")
 
-x<-get_data("ICP.M.FR.N.000000.4.INX",filter=list(startPeriod=2000,endPeriod=2022))
+x<-get_data("ICP.M.FR.N.000000.4.INX",filter=list(startPeriod=2000,endPeriod=2021))
 data=data.frame(as.Date(paste(x$obstime,1,sep="-"),"%Y-%m-%d"))
 
 for (i in names){
-  x<-get_data(i,filter=list(startPeriod=2000,endPeriod=2022))
+  x<-get_data(i,filter=list(startPeriod=2000,endPeriod=2021))
   data<-cbind(data,x$obsvalue)
 }
 
@@ -77,6 +77,7 @@ dev.off()
 
 ```{r}
 library(readxl)
+#Average cons per purpose dataset
 average_con <- read_excel("average_con.xlsx", 
     sheet = "Sheet 1")
 
@@ -84,7 +85,20 @@ colnames(average_con)<-c("Date","Type","Value")
 average_con[,1]<-as.Date(average_con$Date, "%Y")
 average_con[,3]<-as.numeric(average_con$Value)
 
+#quintile dataset
 cons_per_decile <- read_excel("cons_per_decile.xlsx", 
+    sheet = "Sheet 1")
+
+#Urbanisation dataset
+cons_per_city <- read_excel("cons_per_city.xlsx", 
+    sheet = "Sheet 1")
+
+#CSP dataset
+cons_per_csp <- read_excel("cons_per_csp_France.xlsx", 
+    sheet = "Sheet 1")
+
+#Age dataset
+cons_per_age<-read_excel("cons_per_age.xlsx", 
     sheet = "Sheet 1")
 ```
 
@@ -165,7 +179,7 @@ d$Type <- sapply(d$Type, switch,
 )
 quintile_exposure <- d[order(d$Quintile),]                                            
 quintile_exposure$Date<-as.Date(quintile_exposure$Date, format='%Y')
-quintile_exposure$Date <- sub('-08-28', '-01-01', quintile_exposure$Date, fixed=TRUE)
+quintile_exposure$Date <- sub('-09-03', '-01-01', quintile_exposure$Date, fixed=TRUE)
 quintile_exposure$Date <- sub('1999', '2000', quintile_exposure$Date, fixed=TRUE)
 
 ```
@@ -233,4 +247,204 @@ ggplot(pq_quintile, aes(x=as.Date(Date),y=exposure_average, col=Quintile)) +
 dev.off()
 ```
 
+City type consumption heteroegeneity
+```{r}
+colnames(cons_per_city)<-c("Type","city_type","s_2005","s_2010","s_2015")
 
+d<-cons_per_city %>%
+    group_by(city_type) %>%
+    mutate(Somme_2005=sum(s_2005), Somme_2010=sum(s_2010), Somme_2015=sum(s_2015))
+
+share<-d %>%
+  group_by(city_type) %>%
+  summarize(Type=Type, s_2005/Somme_2005, s_2010/Somme_2010, s_2015/Somme_2015 )
+
+colnames(share)<-c("city_type","Type","s_2005","s_2010","s_2015")
+d <- melt(share, id.vars=c("Type","city_type"))
+d$variable <- gsub('s_', '', d$variable, fixed=TRUE)
+
+colnames(d)<-c("Type", "city_type", "Date", "Value")
+
+d$Type <- sapply(d$Type, switch, 
+                      "Food and non-alcoholic beverages"="FOOD",
+                      "Alcoholic beverages, tobacco and narcotics"="ALCOHOL, TOBACCO",
+                      "Clothing and footwear"="CLOTHING",
+                      "Housing, water, electricity, gas and other fuels"="ELECTRICITY, GAS",
+                      "Furnishings, household equipment and routine household maintenance"="FURNISHINGS",
+                      "Health"="HEALTH",
+                      "Transport"="TRANSPORT",
+                      "Communications"="COMMUNICATION",
+                      "Recreation and culture" ="RECREATION",
+                      "Education"="EDUCATION",
+                      "Restaurants and hotels"="RESTAURANTS",
+                      "Miscellaneous goods and services"="MISCELLANEOUS",)
+                 
+#Plots
+png("cons_per_city.png")
+ggplot(d, aes(fill=Type, y=Value, x=city_type)) + 
+  geom_bar(position="stack", stat="identity")+
+  facet_grid(~ Date)+
+  theme_bw()+
+  labs(y="Share","Consumption share over time per city type", 
+       title="Consumption share EA by city type and year",
+       caption = "Author's calculation, Eurostat consumption expenditure by income city type and COICOP")+ 
+  scale_y_continuous(labels = scales::percent)+
+  scale_fill_brewer(palette="Paired")
+dev.off()
+```
+
+```{r}
+log_annual$Date<-as.character(log_annual$Date)
+
+log_annual$Date <- sub('-01-01', '', log_annual$Date, fixed=TRUE)
+
+total_city<-log_annual %>% right_join(d, by=c("Date","Type"))
+
+pq_city<-total_city %>%
+  group_by(Date, city_type) %>%
+  mutate(exposure=sum(Valueindex*Value, na.rm=TRUE))
+
+pq_city<-pq_city %>%
+    group_by(city_type)%>%
+    mutate(exposure_average = exposure/exposure[Date=="2005"])
+
+pq_city <- pq_city[order(pq_city$city_type),]                                            
+
+png("Pindex_city.png")
+ggplot(pq_city, aes(x=as.Date(Date, "%Y"), y=exposure_average, col=city_type)) + 
+  geom_line()+
+  labs(x="Date",y="Price index", title="5year price index by degree of urbanisation", caption="ECB SDW and Eurostat COICOP, Author's calculation")+
+  theme_bw()
+dev.off()
+```
+
+Cons per purpose by csp
+```{r}
+colnames(cons_per_csp)<-c("Type","CSP_WORK","s_1999","s_2005","s_2010","s_2015", "s_2020")
+d<-cons_per_csp %>%
+    group_by(CSP_WORK) %>%
+    mutate(Somme_1999 = sum(s_1999), Somme_2005=sum(s_2005), Somme_2010=sum(s_2010), Somme_2015=sum(s_2015), Somme_2020=sum(s_2020))
+
+share<-d %>%
+  group_by(CSP_WORK) %>%
+  summarize(Type=Type, s_1999/Somme_1999, s_2005/Somme_2005, s_2010/Somme_2010, s_2015/Somme_2015, s_2020/Somme_2020)
+
+colnames(share)<-c("CSP_WORK","Type","s_1999","s_2005","s_2010","s_2015", "s_2020")
+d <- melt(share, id.vars=c("Type","CSP_WORK"))
+d$variable <- gsub('s_', '', d$variable, fixed=TRUE)
+
+colnames(d)<-c("Type", "CSP_WORK", "Date", "Value")
+
+d$Type <- sapply(d$Type, switch, 
+                      "Food and non-alcoholic beverages"="FOOD",
+                      "Alcoholic beverages, tobacco and narcotics"="ALCOHOL, TOBACCO",
+                      "Clothing and footwear"="CLOTHING",
+                      "Housing, water, electricity, gas and other fuels"="ELECTRICITY, GAS",
+                      "Furnishings, household equipment and routine household maintenance"="FURNISHINGS",
+                      "Health"="HEALTH",
+                      "Transport"="TRANSPORT",
+                      "Communications"="COMMUNICATION",
+                      "Recreation and culture" ="RECREATION",
+                      "Education"="EDUCATION",
+                      "Restaurants and hotels"="RESTAURANTS",
+                      "Miscellaneous goods and services"="MISCELLANEOUS",)
+
+d$CSP_WORK <- sapply(d$CSP_WORK, switch, 
+                      "Employed persons except employees"="E",
+                      "Manual workers in industry and services"="M",
+                      "Non-manual workers in industry and services"="N",
+                      "Other persons outside the labour force (former name: inactive persons)"="I",
+                      "Retired persons"="R",
+                      "Unemployed persons"="U",)
+                 
+#Plots
+png("cons_per_csp.png")
+ggplot(d, aes(fill=Type, y=Value, x=CSP_WORK)) + 
+  geom_bar(position="stack", stat="identity")+
+  facet_grid(~ Date)+
+  theme_bw()+
+  labs(y="Share","Consumption share over time per city type", 
+       title="Consumption share France by work and year",
+       caption = "Author's calculation, Eurostat consumption expenditure by income city type and COICOP")+ 
+  scale_y_continuous(labels = scales::percent)+
+  scale_fill_brewer(palette="Paired")
+dev.off()
+```
+Price index by CSP
+```{r}
+log_annual$Date<-as.character(log_annual$Date)
+
+log_annual$Date <- sub('-01-01', '', log_annual$Date, fixed=TRUE)
+d$Date <- sub('1999', '2000', d$Date, fixed=TRUE)
+
+colnames(log_annual)<-c("Date","Type","value","Valueindex","y","log_v")
+total_csp<-log_annual %>% right_join(d, by=c("Date","Type"))
+
+pq_csp<-total_csp %>%
+  group_by(Date, CSP_WORK) %>%
+  mutate(exposure=sum(Valueindex*Value, na.rm=TRUE))
+
+pq_csp<-pq_csp %>%
+    group_by(CSP_WORK)%>%
+    mutate(exposure_average = exposure/exposure[Date=="2000"])
+
+pq_csp <- pq_csp[order(pq_csp$CSP_WORK),]                                            
+
+png("Pindex_csp.png")
+ggplot(pq_csp, aes(x=as.Date(Date, "%Y"), y=exposure_average, col=CSP_WORK)) + 
+  geom_line()+
+  labs(x="Date",y="Price index", title="5year price index by activity status in France", caption="ECB SDW and Eurostat COICOP, Author's calculation")+
+  theme_bw()
+dev.off()
+```
+```{r}
+colnames(cons_per_age)<-c("Type","AGE_RANGE","s_1999","s_2005","s_2010","s_2015")
+d<-cons_per_age %>%
+    group_by(AGE_RANGE) %>%
+    mutate(Somme_1999 = sum(s_1999), Somme_2005=sum(s_2005), Somme_2010=sum(s_2010), Somme_2015=sum(s_2015))
+
+share<-d %>%
+  group_by(AGE_RANGE) %>%
+  summarize(Type=Type, s_1999/Somme_1999, s_2005/Somme_2005, s_2010/Somme_2010, s_2015/Somme_2015)
+
+colnames(share)<-c("AGE_RANGE","Type","s_1999","s_2005","s_2010","s_2015")
+d <- melt(share, id.vars=c("Type","AGE_RANGE"))
+d$variable <- gsub('s_', '', d$variable, fixed=TRUE)
+
+colnames(d)<-c("Type", "AGE_RANGE", "Date", "Value")
+
+d$Type <- sapply(d$Type, switch, 
+                      "Food and non-alcoholic beverages"="FOOD",
+                      "Alcoholic beverages, tobacco and narcotics"="ALCOHOL, TOBACCO",
+                      "Clothing and footwear"="CLOTHING",
+                      "Housing, water, electricity, gas and other fuels"="ELECTRICITY, GAS",
+                      "Furnishings, household equipment and routine household maintenance"="FURNISHINGS",
+                      "Health"="HEALTH",
+                      "Transport"="TRANSPORT",
+                      "Communications"="COMMUNICATION",
+                      "Recreation and culture" ="RECREATION",
+                      "Education"="EDUCATION",
+                      "Restaurants and hotels"="RESTAURANTS",
+                      "Miscellaneous goods and services"="MISCELLANEOUS",)
+
+d$AGE_RANGE <- sapply(d$AGE_RANGE, switch, 
+                      "Less than 30 years"= "30",
+                      "From 30 to 44 years"="30-45",
+                      "From 45 to 59 years"="45-59",
+                      "60 years or over"="60",)
+                 
+d <- d[order(d$AGE_RANGE),]                                            
+
+#Plots
+png("cons_per_age.png")
+ggplot(d, aes(fill=Type, y=Value, x=AGE_RANGE)) + 
+  geom_bar(position="stack", stat="identity")+
+  facet_grid(~ Date)+
+  theme_bw()+
+  labs(y="Share","Consumption share over time per city type", 
+       title="Consumption share France by age range and year",
+       caption = "Author's calculation, Eurostat consumption expenditure by income city type and COICOP")+ 
+  scale_y_continuous(labels = scales::percent)+
+  scale_fill_brewer(palette="Paired")
+dev.off()
+```
