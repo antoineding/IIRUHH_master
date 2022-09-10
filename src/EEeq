@@ -1,4 +1,13 @@
-#EGP Non homothetic preferences
+#Euler equation Non homothetic preferences
+#Equm iter 35, r = 0.04206797050255448, KL ratio new: 5.668515486144455, KL ratio: 5.614007969600302 KL diff: 0.9709198283883724%
+#659.516409 seconds (449.39 M allocations: 345.638 GiB, 11.08% gc time, 0.21% compilation time)
+
+#Mean assets: 5.668515486144454
+#Fraction borrowing constrained: 0.02%
+#10th Percentile: 2.0595983353675344
+#50th Percentile: 5.217634875766818
+#90th Percentile: 9.911458417164877
+#99th Percentile: 14.566907522321564
 
 using NLsolve, Plots, Parameters, Distributions, Random, Statistics, StatsPlots, Interpolations
 cd("/Users/antoineding/Documents/GitHub/IIRUHH_master/src")
@@ -38,16 +47,16 @@ u1inv(u) = u.^(-1 ./(θ))
 
 
 ##NH preferences Intratemporal utility
-function solvingNHEGP(u, cash::Float64, p_c::Vector{Float64}; cal=cal)
+function solvingNHEE(u, cash::Float64, p_c::Vector{Float64}; cal=cal)
     @unpack σ, ζ, γ, ϵ, ρ, β, α, δ, Z = cal
     out=1-sum(γ[i]^(1/σ)*(((p_c[i]/cash)^(-σ)*γ[i])/u^((1-σ)*σ*ϵ[i]))^ρ for i=1:length(p_c))
     return out
 end
-function NHUtilityEGP(cash, p_c::Vector{Float64}; cal=cal)
+function NHUtilityEE(cash, p_c::Vector{Float64}; cal=cal)
     @unpack σ, ζ, γ, ϵ, ρ, β, α, δ, Z = cal
 
     #Utility level for given C endowment
-    res = nlsolve(u->[solvingNHEGP(u[1], cash, p_c)], [1.0], xtol=TolX)
+    res = nlsolve(u->[solvingNHEE(u[1], cash, p_c)], [1.0], xtol=TolX)
     U=res.zero[1]
 
     #Wealth and Minimum expenditure for the utility at given endowment level
@@ -121,16 +130,6 @@ Random.seed!(2022)
 # Random value for revenue for Nsim people Tsim period
 yrand = rand(Nsim,Tsim)
 yindsim = zeros(Int,Nsim,Tsim)
-    
-#Income realization and ranking in the distribution there is 10 rank corresponding to deciles
-for it = 1:Tsim
-    yindsim[yrand[:,it].<=ycumdist[1],it] .= 1
-    for iy = 2:ny
-        yindsim[(yrand[:,it].>ycumdist[iy-1]) .& (yrand[:,it].<=ycumdist[iy]),it] .= iy;
-    end
-end
-    
-ysim = ygrid[yindsim]
 
 # ITERATE OVER KL RATIO
 KLratio = KLratioguess
@@ -154,22 +153,20 @@ p=[0.5, 1.0, 2.0]
         global Uguess = zeros(na,ny)
         global cashU=zeros(na,ny)
         for iy = 1:ny
-            cash[:,iy] = R.*agrid .+ wage.*ygrid[iy]
             for ia=1:na
-
-                # Utility and verify if spending is equal to available resource E
-                Uguess[ia,iy] = NHUtilityEGP(cash[ia,iy],p)[4]
-                cashU[ia,iy] = NHUtilityEGP(cash[ia,iy],p)[5]
-
+                cash = R.*agrid[ia] .+ wage.*ygrid[iy]
+                Uguess[ia,iy] = NHUtilityEE(cash,p)[4]
+                cashU[ia,iy] = NHUtilityEE(cash,p)[5]
             end
         end
-        U=Uguess
     end
 
     ## solve for policy functions with EGP
     
     iter = 0
     Udiff = 1000
+    U=copy(Uguess)
+
     if iterKL>=2
         U=copy(Ulast)
     end
@@ -185,44 +182,31 @@ p=[0.5, 1.0, 2.0]
         global S1 = zeros(na,ny)
         global S2 = zeros(na,ny)
         global S3 = zeros(na,ny)
-
-        E=zeros(na)
-        emuc = u1(Ulast)*ydist
-        muc1 = β.*R.*emuc
-        con1 = u1inv(muc1)
-        
-        #solve for Expenditure
-        for iy=1:ny
-            for ia=1:na
-                E[ia]=nlsolve(x -> [NHUtilityEGP(x[1], p)[4].-con1[ia]], [1.0]).zero[1]
-            end
-        end
+        global emuc = u1(Ulast)*ydist
 
         ## loop over income
-        ass1 = zeros(na,ny)
         for iy = 1:ny
             ## loop over current period ssets
             for ia  = 1:na
-                ass1[:,iy] = (E.+ agrid.-wage.*ygrid[iy])./R
-                if agrid[ia]<ass1[1,iy] # borrowing constraint binds
-                    sav[ia,iy] = borrow_lim                
-                else # borrowing constraint does not bind;
-                    sav[ia,iy] = lininterp1(ass1[:,iy],agrid,agrid[ia])
-                end          
-                
-                # Utility and verify if spending is equal to available resource E
-                U[ia,iy] = NHUtilityEGP(wage.*ygrid[iy].+ R.*agrid[ia].- sav[ia,iy], p)[4]
-                cashU[ia,iy] = NHUtilityEGP(wage.*ygrid[iy].+ R.*agrid[ia].- sav[ia,iy],p)[5]
-
+                 cash = R.*agrid[ia] .+ wage.*ygrid[iy]
+                    if u1(cash-borrow_lim) >= β.*R.*lininterp1(agrid,emuc,borrow_lim) # check if borrowing constrained
+                        sav[ia,iy] = borrow_lim
+                    else
+                        sav[ia,iy] = nlsolve(x -> [u1(NHUtilityEE(cash.-x[1], p)[4]).-β.*R.*lininterp1(agrid,emuc,x[1])], [cash.-Elast[ia,iy]]).zero[1] # EE equation iteration
+                    end           
                 # Quantity primary, normal, luxury goods
-                C1[ia,iy] = NHUtilityEGP(wage.*ygrid[iy].+ R.*agrid[ia].- sav[ia,iy],p)[1]
-                C2[ia,iy] = NHUtilityEGP(wage.*ygrid[iy].+ R.*agrid[ia].- sav[ia,iy],p)[2]
-                C3[ia,iy] = NHUtilityEGP(wage.*ygrid[iy].+ R.*agrid[ia].- sav[ia,iy],p)[3]
+                C1[ia,iy] = NHUtilityEE(cash .- sav[ia,iy],p)[1]
+                C2[ia,iy] = NHUtilityEE(cash .- sav[ia,iy],p)[2]
+                C3[ia,iy] = NHUtilityEE(cash .- sav[ia,iy],p)[3]
+
+                # Utility and verify if spending is equal to available resource E
+                U[ia,iy] = NHUtilityEE(cash .- sav[ia,iy],p)[4]
+                cashU[ia,iy] = NHUtilityEE(cash .- sav[ia,iy],p)[5]
 
                 #Share in primary, normal, luxury goods
-                S1[ia,iy] = NHUtilityEGP(wage.*ygrid[iy].+ R.*agrid[ia].- sav[ia,iy],p)[6][1]
-                S2[ia,iy] = NHUtilityEGP(wage.*ygrid[iy].+ R.*agrid[ia].- sav[ia,iy],p)[6][2]
-                S3[ia,iy] = NHUtilityEGP(wage.*ygrid[iy].+ R.*agrid[ia].- sav[ia,iy],p)[6][3]
+                S1[ia,iy] = NHUtilityEE(cash .- sav[ia,iy],p)[6][1]
+                S2[ia,iy] = NHUtilityEE(cash .- sav[ia,iy],p)[6][2]
+                S3[ia,iy] = NHUtilityEE(cash .- sav[ia,iy],p)[6][3]       
             end
         end
      
@@ -230,11 +214,19 @@ p=[0.5, 1.0, 2.0]
         if Display>=2
             println("Iteration no. " * string(iter), " max con fn diff is " * string(Udiff))
         end
-    end    
+    end
+
+    for ia=1:na
+        for iy=1:ny
+            if sav[ia,iy]<=0
+                sav[ia,iy]=0
+            end
+        end
+    end
 
 
     ## simulate: start at assets from last interation
-    if iterKL==1
+    if iterKL>=1
         global asim = zeros(Nsim,Tsim)
     elseif iterKL>1
         # asim[:,1] = Ea.*ones(Nsim,1)
@@ -247,6 +239,7 @@ p=[0.5, 1.0, 2.0]
         savinterp[iy] = interpolate((agrid,), sav[:,iy], Gridded(Linear()))
     end
     
+
     ## loop over time periods
     for it = 1:Tsim
         if Display>=2 && mod(it,100)==0
@@ -268,6 +261,7 @@ p=[0.5, 1.0, 2.0]
         end
     end
 
+
     ## assign actual labor income values
     labincsim = wage.*ysim
 
@@ -275,21 +269,23 @@ p=[0.5, 1.0, 2.0]
     global Ea = mean(asim[:,Tsim])
     L = mean(ysim[:,Tsim])
     
-    KLrationew = Ea./ L
+    KLrationew = Ea/ L
     
-    KLdiff = KLrationew./KLratio - 1
+    KLdiff = KLrationew/KLratio - 1
     if Display>=1
-        println("Equm iter " * string(iterKL) * ", r = " * string(r) * ", KL ratio: " * string(KLrationew) * " KL diff: " * string(KLdiff*100) * "%")
+        println("Equm iter " * string(iterKL) * ", r = " * string(r) * ", KL ratio new: " * string(KLrationew) * ", KL ratio: " * string(KLratio) *" KL diff: " * string(KLdiff*100) * "%")
     end
 
     KLratio = (1-step_KL)*KLratio + step_KL*KLrationew
 end
 
+ysim = ygrid[yindsim]
+
 # MAKE PLOTS
 if MakePlots==1
     
     ## consumption policy function
-    p1 = plot(agrid, [Uguess[:,1] Uguess[:,ny]], xlims=(0,amax), title="Consumption Policy Function", color=[:blue :red], label=["Lowest income state" "Highest income state"])
+    p1 = plot(agrid, [Ulast[:,1] Ulast[:,ny]], xlims=(0,amax), title="Consumption Policy Function", color=[:blue :red], label=["Lowest income state" "Highest income state"])
     display(p1)
     p1C1 = plot(agrid, [S1[:,1] S1[:,ny] S2[:,1] S2[:,ny] S3[:,1] S3[:,ny]], xlims=(0,amax), title="Consumption Policy Function", color=[:blue :red], label=["Lowest income state" "Highest income state"])
     display(p1C1)
@@ -314,7 +310,7 @@ if MakePlots==1
     end
 
     ## consumption policy function: zoomed in
-    p3 = plot(agrid[xlimind], [Uguess[xlimind,1] Uguess[xlimind,ny]], xlims=xlimits, title="Consumption: Zoomed", marker=:circle, color=[:blue :red], linewidth=2, legend=false)
+    p3 = plot(agrid[xlimind], [Ulast[xlimind,1] Ulast[xlimind,ny]], xlims=xlimits, title="Consumption: Zoomed", marker=:circle, color=[:blue :red], linewidth=2, legend=false)
     plot!(show=true)
     display(p3)
 
