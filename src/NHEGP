@@ -13,7 +13,7 @@ include("lininterp1.jl")
     ζ::Float64=2.0                      # Intertemporal elasticity of substitution
     θ::Float64=1/ζ                      # Inverse of intertemporal elasticity of substitution 
     γ::Array{Float64}=[1/3, 1/3, 1/3]   # intensity in each good
-    ϵ::Array{Float64}=[0.5, 1.0, 1.25]  # elasticity of relative demand with respect to income in luxury good sector
+    ϵ::Array{Float64}=[0.8, 1.0, 1.25]  # elasticity of relative demand with respect to income in luxury good sector
     ε::Array{Float64}=[ϵ[1]/ϵ[2], ϵ[2]/ϵ[2], ϵ[3]/ϵ[2] ]
     ρ::Float64 =(σ-1)/σ                 
     β::Float64 = 0.96                   # Discount factor
@@ -81,8 +81,8 @@ borrow_lim = 0
 agrid_par = 0.5 # 1 for linear, 0 for L-shaped
 
 ## computation
-max_iter = 1000
-tol_iter = 1.0e-6
+max_iter = 200
+tol_iter = 1.0e-2
 Nsim = 50000
 Tsim = 500
 
@@ -150,13 +150,30 @@ while iterKL<=maxiter_KL && abs(KLdiff)>tol_KL
     ## initialize consumption function in first iteration only
     if iterKL==1
         cash = zeros(na,ny)
-        Uguess=zeros(na,ny)
-        cashU=zeros(na,ny)
+        global Uguess = zeros(na,ny)
+        global C1 = zeros(na,ny)
+        global C2 = zeros(na,ny)
+        global C3 = zeros(na,ny)
+        global S1 = zeros(na,ny)
+        global S2 = zeros(na,ny)
+        global S3 = zeros(na,ny)
+        global NHExp=zeros(na,ny)
         for iy = 1:ny
             cash[:,iy] = R.*agrid .+ wage.*ygrid[iy]
             for ia=1:na
-                Uguess[ia,iy]=NHUtilityEGP(cash[ia,iy], p)[4]
-                cashU[ia,iy]=NHUtilityEGP(cash[ia,iy], p)[7]
+                # Quantity primary, normal, luxury goods
+                C1[ia,iy] = NHUtilityEGP(cash[ia,iy],p)[1]
+                C2[ia,iy] = NHUtilityEGP(cash[ia,iy],p)[2]
+                C3[ia,iy] = NHUtilityEGP(cash[ia,iy],p)[3]
+
+                # Utility and verify if spending is equal to available resource E
+                Uguess[ia,iy] = NHUtilityEGP(cash[ia,iy],p)[4]
+                NHExp[ia,iy] = NHUtilityEGP(cash[ia,iy],p)[5]
+
+                #Share in primary, normal, luxury goods
+                S1[ia,iy] = NHUtilityEGP(cash[ia,iy],p)[6][1]
+                S2[ia,iy] = NHUtilityEGP(cash[ia,iy],p)[6][2]
+                S3[ia,iy] = NHUtilityEGP(cash[ia,iy],p)[6][3]
             end
         end
     end
@@ -164,10 +181,10 @@ while iterKL<=maxiter_KL && abs(KLdiff)>tol_KL
     ## solve for policy functions with EGP
     
     iter = 0
-    cdiff = 1000
+    Udiff = 1000
     U=copy(Uguess)
 
-    while iter <= max_iter && cdiff>tol_iter
+    while iter <= max_iter && Udiff>tol_iter
         iter = iter + 1
         global Ulast = copy(U)
         global sav = zeros(na,ny) 
@@ -195,7 +212,7 @@ while iterKL<=maxiter_KL && abs(KLdiff)>tol_KL
                 else # borrowing constraint does not bind;
                     sav[ia,iy] = lininterp1(ass1[:,iy],agrid,agrid[ia])
                 end                
-                U[ia,iy] = NHUtilityEGP(E[ia].+ R.*ass1[ia,iy].- sav[ia,iy], p)[4]
+                U[ia,iy] = NHUtilityEGP(wage.*ygrid[iy].+ R.*agrid[ia].- sav[ia,iy], p)[4]
             end
         end
      
@@ -255,8 +272,10 @@ end
 if MakePlots==1
     
     ## consumption policy function
-    p1 = plot(agrid, [con[:,1] con[:,ny]], xlims=(0,amax), title="Consumption Policy Function", color=[:blue :red], label=["Lowest income state" "Highest income state"])
+    p1 = plot(agrid, [Uguess[:,1] Uguess[:,ny]], xlims=(0,amax), title="Consumption Policy Function", color=[:blue :red], label=["Lowest income state" "Highest income state"])
     display(p1)
+    p1C1 = plot(agrid, [S1[:,1] S1[:,ny] S2[:,1] S2[:,ny] S3[:,1] S3[:,ny]], xlims=(0,amax), title="Consumption Policy Function", color=[:blue :red], label=["Lowest income state" "Highest income state"])
+    display(p1C1)
     
     ## savings policy function
     p2 = plot(agrid, [sav[:,1].-agrid[:,1] sav[:,ny].-agrid[:,1]], xlims=(0,amax), title="Savings Policy Function", color=[:blue :red], legend=false)
@@ -278,7 +297,7 @@ if MakePlots==1
     end
 
     ## consumption policy function: zoomed in
-    p3 = plot(agrid[xlimind], [con[xlimind,1] con[xlimind,ny]], xlims=xlimits, title="Consumption: Zoomed", marker=:circle, color=[:blue :red], linewidth=2, legend=false)
+    p3 = plot(agrid[xlimind], [Uguess[xlimind,1] Uguess[xlimind,ny]], xlims=xlimits, title="Consumption: Zoomed", marker=:circle, color=[:blue :red], linewidth=2, legend=false)
     plot!(show=true)
     display(p3)
 

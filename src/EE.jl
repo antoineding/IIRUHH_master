@@ -9,7 +9,7 @@ include("lininterp1.jl")
     ζ::Float64=2.0                      # Intertemporal elasticity of substitution
     θ::Float64=1/ζ                      # Inverse of intertemporal elasticity of substitution 
     γ::Array{Float64}=[1/3, 1/3, 1/3]   # intensity in each good
-    ϵ::Array{Float64}=[0.6, 1.0, 1.65]  # elasticity of relative demand with respect to income in luxury good sector
+    ϵ::Array{Float64}=[0.8, 1.0, 1.20]  # elasticity of relative demand with respect to income in luxury good sector
     ε::Array{Float64}=[ϵ[1]/ϵ[2], ϵ[2]/ϵ[2], ϵ[3]/ϵ[2] ]
     ρ::Float64 =(σ-1)/σ                 
     β::Float64 = 0.96                   # Discount factor
@@ -113,24 +113,25 @@ yrand = rand(Nsim,Tsim)
 
 #Firms market value
 KLratio = KLratioguess
-r = α.*KLratio^(α-1) - δ
+r = α.*Z[2].*KLratio^(α-1) - δ
 R = 1+r
 wage = (1-α).* KLratio^α
 
 
 #Initialize
 p=[0.5, 1.0, 2.0]
+#Inform on cash possibilities given grids
 cash=zeros(na,ny)
 for i=1:ny
     cash[:,i]=r.*agrid.+wage.*ygrid[i]
 end
 cash
-
+# Make a first guess given available cash
 Uguess=zeros(na,ny)
 cashU=zeros(na,ny)
 for j=1:ny
     for i=1:na
-        Uguess[i,j]=NHUtilityEE(cash[i,j], p)[4]
+        Uguess[i,j]=NHUtilityEE(cash[i,j], p)[4] # index 4 is the utility level in NHUtilityEE function
         cashU[i,j]=NHUtilityEE(cash[i,j], p)[7]
     end
 end
@@ -145,7 +146,14 @@ while iter<=max_iter && cdiff>tol_iter
     global Ulast = copy(U)
     global Elast = copy(cashU)
     global sav = zeros(na,ny)
-    
+    global C1 = zeros(na,ny)
+    global C2 = zeros(na,ny)
+    global C3 = zeros(na,ny)
+    global S1 = zeros(na,ny)
+    global S2 = zeros(na,ny)
+    global S3 = zeros(na,ny)
+    global NHExp=zeros(na,ny)
+
     ## loop over assets
     for ia = 1:na     
         ## loop over income
@@ -154,9 +162,21 @@ while iter<=max_iter && cdiff>tol_iter
                 if u1(cash-borrow_lim) >= β.*R.*lininterp1(agrid,emuc,borrow_lim) # check if borrowing constrained
                     sav[ia,iy] = borrow_lim
                 else
-                    sav[ia,iy] = nlsolve(x -> [u1(NHUtilityEE(cash.-x[1], p)[4]).-β.*R.*lininterp1(agrid,emuc,x[1])], [cash.-Elast[ia,iy]]).zero[1]
+                    sav[ia,iy] = nlsolve(x -> [u1(NHUtilityEE(cash.-x[1], p)[4]).-β.*R.*lininterp1(agrid,emuc,x[1])], [cash.-Elast[ia,iy]]).zero[1] # EE equation iteration
                 end
+            # Quantity primary, normal, luxury goods
+            C1[ia,iy] = NHUtilityEE(cash .- sav[ia,iy],p)[1]
+            C2[ia,iy] = NHUtilityEE(cash .- sav[ia,iy],p)[2]
+            C3[ia,iy] = NHUtilityEE(cash .- sav[ia,iy],p)[3]
+
+            # Utility and verify if spending is equal to available resource E
             U[ia,iy] = NHUtilityEE(cash .- sav[ia,iy],p)[4]
+            NHExp[ia,iy] = NHUtilityEE(cash .- sav[ia,iy],p)[5]
+
+            #Share in primary, normal, luxury goods
+            S1[ia,iy] = NHUtilityEE(cash .- sav[ia,iy],p)[6][1]
+            S2[ia,iy] = NHUtilityEE(cash .- sav[ia,iy],p)[6][2]
+            S3[ia,iy] = NHUtilityEE(cash .- sav[ia,iy],p)[6][3]
         end
     end
 
@@ -215,9 +235,9 @@ for i=1:ny
 end
 con=cash-sav
 
-    if MakePlots==1
-    ## consumption policy function
-    p1 = plot(agrid, [con[:,1] con[:,ny]], xlims=(0,amax), title="Consumption", color=[:blue :red], label=["Lowest income state" "Highest income state"])
+if MakePlots==1
+    ## Expenditure policy function
+    p1 = plot(agrid, [U[:,1] U[:,ny]], xlims=(0,amax), title="Consumption", color=[:blue :red], label=["Lowest income state" "Highest income state"])
     display(p1)
 
     ## savings policy function
