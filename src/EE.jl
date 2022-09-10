@@ -1,3 +1,11 @@
+
+#Mean assets (relative to mean income): 1.9603130195721614
+#Fraction borrowing constrained: 0.334%
+#10th Percentile: 0.5883722540808267
+#50th Percentile: 1.7601937102318668
+#90th Percentile: 3.568048744276302
+#99th Percentile: 5.6439017208725035
+
 using NLsolve, Plots, Parameters, Distributions, Random, Statistics, StatsPlots, Interpolations
 cd("/Users/antoineding/Documents/GitHub/IIRUHH_master/src")
 include("discrete_normal.jl")
