@@ -1,0 +1,79 @@
+#EGP Non homothetic preferences
+##  1.   ϵ::Array{Float64}=[0.8, 1.0, 1.25]  # elasticity of relative demand with respect to income in luxury good sector
+# Equm iter 39, r = 0.04199330941180121, KL ratio: 5.6733008602741295 KL diff: 0.9676616865612386%
+# 485.787303 seconds (665.62 M allocations: 383.013 GiB, 9.40% gc time, 0.04% compilation time)
+
+#Mean assets: 5.67330086027413
+#Fraction borrowing constrained: 0.016%
+#10th Percentile: 2.121005705152509
+#50th Percentile: 5.26107974444402
+#90th Percentile: 9.813009313864436
+#99th Percentile: 14.240171173390664
+
+##  2.   ϵ::Array{Float64}=[0.8, 1.0, 1.50]  # elasticity of relative demand with respect to income in luxury good sector
+#Equm iter 25, r = 0.042366220916738445, KL ratio: 5.650013544860214 KL diff: 0.9937344978794949%
+#325.193436 seconds (544.42 M allocations: 249.379 GiB, 9.36% gc time, 0.29% compilation time)
+
+#Mean assets: 5.650013544860214
+#Fraction borrowing constrained: 0.016%
+#10th Percentile: 2.0752933160968614
+#50th Percentile: 5.2065103758474915
+#90th Percentile: 9.846551467319541
+#99th Percentile: 14.493345098258855
+
+#    3. ϵ::Array{Float64}=[0.5, 1.0, 2.00]  # elasticity of relative demand with respect to income in luxury good sector
+
+#Equm iter 42, r = 0.04188061729019382, KL ratio: 5.6791721790912595 KL diff: 0.9384966815908502%
+#461.412200 seconds (510.29 M allocations: 405.778 GiB, 9.79% gc time, 0.18% compilation time)
+
+#Mean assets: 5.6791721790912595
+#Fraction borrowing constrained: 0.006%
+#10th Percentile: 2.286990081246028
+#50th Percentile: 5.357083932252863
+#90th Percentile: 9.525054502872843
+#99th Percentile: 13.47422784824596
+
+#     4. ϵ::Array{Float64}=[1.0, 1.0, 1.00]  # elasticity of relative demand with respect to income in luxury good sector
+
+#Equm iter 6, r = 0.04252269768388445, KL ratio: 5.538799801170685 KL diff: -0.8127751671893502%
+#143.410526 seconds (572.72 M allocations: 74.270 GiB, 6.53% gc time, 0.73% compilation time)
+
+#Mean assets: 5.538799801170684
+#Fraction borrowing constrained: 0.02%
+#10th Percentile: 1.9127451028847449
+#50th Percentile: 5.018447397910352
+#90th Percentile: 9.894684434828415
+#99th Percentile: 14.944136663491909
+
+
+#      5. ϵ::Array{Float64}=[0.5, 1.0, 1.65]  # elasticity of relative demand with respect to income in luxury good sector
+
+#Equm iter 26, r = 0.042339573379145706, KL ratio: 5.652083336829179 KL diff: 0.9992163568708134%
+#318.051213 seconds (532.95 M allocations: 258.272 GiB, 9.20% gc time, 0.35% compilation time)
+
+#Mean assets: 5.65208333682918
+#Fraction borrowing constrained: 0.016%
+#10th Percentile: 2.093506333557337
+#50th Percentile: 5.22191285337717
+#90th Percentile: 9.818237781201157
+#99th Percentile: 14.381061411027229
+
+
+
+
+TEST: 
+ϵ::Array{Float64}=[0.5, 1.0, 2.0]  # elasticity of relative demand with respect to income in luxury good sector
+Z=1.0
+
+Equm iter 8, r = 0.04283142677855917, KL ratio new: 5.510372481420556, KL ratio: 5.56408421640223 KL diff: -0.9653292957597204%
+ 41.779246 seconds (192.53 M allocations: 12.459 GiB, 7.28% gc time, 2.62% compilation time)
+
+Mean assets: 5.510372481420557
+Fraction borrowing constrained: 0.01%
+10th Percentile: 1.9566509308045155
+50th Percentile: 5.005967804011063
+90th Percentile: 9.769159857426743
+99th Percentile: 14.477383279507345
+
+ϵ::Array{Float64}=[0.5, 1.0, 2.0]  # elasticity of relative demand with respect to income in luxury good sector
+Z=1.2

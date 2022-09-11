@@ -261,6 +261,7 @@ p=[0.5, 1.0, 2.0]
         end
     end
 
+    ysim = ygrid[yindsim]
 
     ## assign actual labor income values
     labincsim = wage.*ysim
