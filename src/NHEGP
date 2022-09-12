@@ -71,12 +71,12 @@ include("lininterp1.jl")
     ϵ::Array{Float64}=[0.8, 1.0, 1.25]  # elasticity of relative demand with respect to income in luxury good sector
     ε::Array{Float64}=[ϵ[1]/ϵ[2], ϵ[2]/ϵ[2], ϵ[3]/ϵ[2] ]
     ρ::Float64 =(σ-1)/σ                 
-    β::Float64 = 0.96                   # Discount factor
+    β::Float64 = 0.96                  # Discount factor
 
     #Production
     α::Float64=0.4                      # Capital share
     δ::Float64=0.1                      # Capital depreciation
-    Z::Array{Float64}=[0.9, 1.0, 1.001]   # Sector productivity
+    Z::Array{Float64}=[0.9, 1.0, 1.10]   # Sector productivity
 end
 cal = Calibration()
 
@@ -127,7 +127,7 @@ end
 ## income risk: discretized N(mu,sigma^2)
 mu_y = 1
 sd_y = 0.2
-ny = 5
+ny = 10
 
 ## asset grids
 na = 40
@@ -137,15 +137,15 @@ agrid_par = 0.5 # 1 for linear, 0 for L-shaped
 
 ## computation
 max_iter = 200
-tol_iter = 1.0e-2
+tol_iter = 1.0e-3
 Nsim = 10000
 Tsim = 500
 
 # computation KL
 maxiter_KL = 200
-tol_KL = 1.0e-2
+tol_KL = 5.0e-4
 step_KL = 0.005
-rguess = 1/β-1-0.001 # a bit lower than inverse of discount rate
+rguess = 1/β-1-0.0001 # a bit lower than inverse of discount rate
 KLratioguess = ((rguess + δ)/α.*Z[3])^(1/(α-1))
 
 # OPTIONS
@@ -261,7 +261,7 @@ p=[0.5, 1.0, 2.0]
                 if agrid[ia]<ass1[1,iy] # borrowing constraint binds
                     sav[ia,iy] = borrow_lim                
                 else # borrowing constraint does not bind;
-                    sav[ia,iy] = lininterp1(ass1[:,iy],agrid,agrid[ia])
+                    sav[ia,iy] = lininterp1(ass1[:,iy], agrid, agrid[ia])
                 end          
                 
                 # Utility and verify if spending is equal to available resource E
@@ -297,7 +297,7 @@ p=[0.5, 1.0, 2.0]
     ## create interpolating function
     savinterp = Array{Any}(undef,ny)
     for iy = 1:ny
-        savinterp[iy] = interpolate((agrid,), sav[:,iy], Gridded(Linear()))
+        savinterp[iy] = interpolate((Z[3].*agrid,), sav[:,iy], Gridded(Linear()))
     end
     
 

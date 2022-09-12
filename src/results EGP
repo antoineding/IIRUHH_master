@@ -82,7 +82,9 @@ Z=1.2
 
 12/09/2022
 
+
 1.
+
 @with_kw struct Calibration
     #Households
     σ::Float64=0.5                      # elasticity of relative demand with respect to price sigma=0.5 completementary goods
@@ -92,7 +94,7 @@ Z=1.2
     ϵ::Array{Float64}=[0.8, 1.0, 1.25]  # elasticity of relative demand with respect to income in luxury good sector
     ε::Array{Float64}=[ϵ[1]/ϵ[2], ϵ[2]/ϵ[2], ϵ[3]/ϵ[2] ]
     ρ::Float64 =(σ-1)/σ                 
-    β::Float64 = 0.96                   # Discount factor
+    β::Float64 = 0.96                  # Discount factor
 
     #Production
     α::Float64=0.4                      # Capital share
@@ -101,17 +103,19 @@ Z=1.2
 end
 cal = Calibration()
 
-Equm iter 27, r = 0.04232538047917639, KL ratio new: 5.650469531247273, KL ratio: 5.597095663030265 KL diff: 0.9535993563510425%
- 82.984472 seconds (316.31 M allocations: 31.290 GiB, 9.91% gc time, 5.03% compilation time)
-Mean assets: 5.650469531247273
-Fraction borrowing constrained: 0.01%
-10th Percentile: 1.9929706852348665
-50th Percentile: 5.133089853759325
-90th Percentile: 10.043400264217837
-99th Percentile: 14.815266821993681
+Equm iter 13, r = 0.04175022212933374, KL ratio new: 5.637807857855278, KL ratio: 5.634997642282036 KL diff: 0.04987074976137151%
+133.707427 seconds (778.51 M allocations: 40.711 GiB, 6.32% gc time, 3.73% compilation time)
+Mean assets: 5.637807857855278
+Fraction borrowing constrained: 0.04%
+10th Percentile: 1.9029642724033464
+50th Percentile: 5.1338106863506
+90th Percentile: 10.090755682159083
+99th Percentile: 14.702903970241609
+
 
 
 2. 
+
 @with_kw struct Calibration
     #Households
     σ::Float64=0.5                      # elasticity of relative demand with respect to price sigma=0.5 completementary goods
@@ -121,19 +125,20 @@ Fraction borrowing constrained: 0.01%
     ϵ::Array{Float64}=[0.8, 1.0, 1.25]  # elasticity of relative demand with respect to income in luxury good sector
     ε::Array{Float64}=[ϵ[1]/ϵ[2], ϵ[2]/ϵ[2], ϵ[3]/ϵ[2] ]
     ρ::Float64 =(σ-1)/σ                 
-    β::Float64 = 0.96                   # Discount factor
+    β::Float64 = 0.96                  # Discount factor
 
     #Production
     α::Float64=0.4                      # Capital share
     δ::Float64=0.1                      # Capital depreciation
-    Z::Array{Float64}=[0.9, 1.0, 1.001]   # Sector productivity
+    Z::Array{Float64}=[0.9, 1.0, 1.10]   # Sector productivity
 end
+cal = Calibration()
 
-Equm iter 88, r = 0.04186517783999072, KL ratio new: 5.691882920115203, KL ratio: 5.6367715861168985 KL diff: 0.9777109672856277%
-150.455558 seconds (435.86 M allocations: 82.146 GiB, 13.26% gc time, 2.69% compilation time)
-Mean assets: 5.691882920115204
-Fraction borrowing constrained: 0.01%
-10th Percentile: 2.0800957374107285
-50th Percentile: 5.245160894295266
-90th Percentile: 9.903038844792533
-99th Percentile: 14.353013842479976
+Equm iter 201, r = 0.05944673548864701, KL ratio new: 5.4394938302167395, KL ratio: 5.429107081617843 KL diff: 0.19131596490451486%
+872.499442 seconds (3.60 G allocations: 351.748 GiB, 8.75% gc time, 0.11% compilation time)
+Mean assets: 5.43949383021674
+Fraction borrowing constrained: 0.0%
+10th Percentile: 4.597463271683331
+50th Percentile: 5.439742127379128
+90th Percentile: 6.285465906205728
+99th Percentile: 6.9694892941972135
