@@ -76,7 +76,7 @@ include("lininterp1.jl")
     #Production
     α::Float64=0.4                      # Capital share
     δ::Float64=0.1                      # Capital depreciation
-    Z::Array{Float64}=[0.9, 1.0, 1.10]   # Sector productivity
+    Z::Array{Float64}=[0.9, 1.0, 1.05]   # Sector productivity
 end
 cal = Calibration()
 
@@ -143,7 +143,7 @@ Tsim = 500
 
 # computation KL
 maxiter_KL = 200
-tol_KL = 5.0e-4
+tol_KL = 5.0e-3
 step_KL = 0.005
 rguess = 1/β-1-0.0001 # a bit lower than inverse of discount rate
 KLratioguess = ((rguess + δ)/α.*Z[3])^(1/(α-1))
@@ -385,6 +385,10 @@ if MakePlots==1
     ## asset distribution statistics
     aysim = asim[:,Tsim]./mean(ysim[:,Tsim])
     println("Mean assets: " * string(mean(aysim)))
+    println("Total assets: " * string(cumsum(aysim)[end]))
+    println("Total labor: " * string(cumsum(ysim[:,end])[end]))
+    println("Mean assets: " * string(mean(aysim)))
+
     println("Fraction borrowing constrained: " * string(sum(aysim.==borrow_lim)/Nsim * 100) * '%')
     println("10th Percentile: " * string(quantile(aysim,.1)))
     println("50th Percentile: " * string(quantile(aysim,.5)))
