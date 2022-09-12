@@ -77,3 +77,63 @@ Fraction borrowing constrained: 0.01%
 
 ϵ::Array{Float64}=[0.5, 1.0, 2.0]  # elasticity of relative demand with respect to income in luxury good sector
 Z=1.2
+
+
+
+12/09/2022
+
+1.
+@with_kw struct Calibration
+    #Households
+    σ::Float64=0.5                      # elasticity of relative demand with respect to price sigma=0.5 completementary goods
+    ζ::Float64=2.0                      # Intertemporal elasticity of substitution
+    θ::Float64=1/ζ                      # Inverse of intertemporal elasticity of substitution 
+    γ::Array{Float64}=[1/3, 1/3, 1/3]   # intensity in each good
+    ϵ::Array{Float64}=[0.8, 1.0, 1.25]  # elasticity of relative demand with respect to income in luxury good sector
+    ε::Array{Float64}=[ϵ[1]/ϵ[2], ϵ[2]/ϵ[2], ϵ[3]/ϵ[2] ]
+    ρ::Float64 =(σ-1)/σ                 
+    β::Float64 = 0.96                   # Discount factor
+
+    #Production
+    α::Float64=0.4                      # Capital share
+    δ::Float64=0.1                      # Capital depreciation
+    Z::Array{Float64}=[0.9, 1.0, 1.00]   # Sector productivity
+end
+cal = Calibration()
+
+Equm iter 27, r = 0.04232538047917639, KL ratio new: 5.650469531247273, KL ratio: 5.597095663030265 KL diff: 0.9535993563510425%
+ 82.984472 seconds (316.31 M allocations: 31.290 GiB, 9.91% gc time, 5.03% compilation time)
+Mean assets: 5.650469531247273
+Fraction borrowing constrained: 0.01%
+10th Percentile: 1.9929706852348665
+50th Percentile: 5.133089853759325
+90th Percentile: 10.043400264217837
+99th Percentile: 14.815266821993681
+
+
+2. 
+@with_kw struct Calibration
+    #Households
+    σ::Float64=0.5                      # elasticity of relative demand with respect to price sigma=0.5 completementary goods
+    ζ::Float64=2.0                      # Intertemporal elasticity of substitution
+    θ::Float64=1/ζ                      # Inverse of intertemporal elasticity of substitution 
+    γ::Array{Float64}=[1/3, 1/3, 1/3]   # intensity in each good
+    ϵ::Array{Float64}=[0.8, 1.0, 1.25]  # elasticity of relative demand with respect to income in luxury good sector
+    ε::Array{Float64}=[ϵ[1]/ϵ[2], ϵ[2]/ϵ[2], ϵ[3]/ϵ[2] ]
+    ρ::Float64 =(σ-1)/σ                 
+    β::Float64 = 0.96                   # Discount factor
+
+    #Production
+    α::Float64=0.4                      # Capital share
+    δ::Float64=0.1                      # Capital depreciation
+    Z::Array{Float64}=[0.9, 1.0, 1.001]   # Sector productivity
+end
+
+Equm iter 88, r = 0.04186517783999072, KL ratio new: 5.691882920115203, KL ratio: 5.6367715861168985 KL diff: 0.9777109672856277%
+150.455558 seconds (435.86 M allocations: 82.146 GiB, 13.26% gc time, 2.69% compilation time)
+Mean assets: 5.691882920115204
+Fraction borrowing constrained: 0.01%
+10th Percentile: 2.0800957374107285
+50th Percentile: 5.245160894295266
+90th Percentile: 9.903038844792533
+99th Percentile: 14.353013842479976
