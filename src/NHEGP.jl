@@ -76,7 +76,7 @@ include("lininterp1.jl")
     #Production
     α::Float64=0.4                      # Capital share
     δ::Float64=0.1                      # Capital depreciation
-    Z::Array{Float64}=[0.9, 1.0, 1.05]   # Sector productivity
+    Z::Array{Float64}=[0.9, 1.0, 1.10]   # Sector productivity
 end
 cal = Calibration()
 
@@ -137,14 +137,14 @@ agrid_par = 0.5 # 1 for linear, 0 for L-shaped
 
 ## computation
 max_iter = 200
-tol_iter = 1.0e-3
+tol_iter = 5.0e-3
 Nsim = 10000
 Tsim = 500
 
 # computation KL
 maxiter_KL = 200
-tol_KL = 5.0e-3
-step_KL = 0.005
+tol_KL = 1.0e-3
+step_KL = 0.01
 rguess = 1/β-1-0.0001 # a bit lower than inverse of discount rate
 KLratioguess = ((rguess + δ)/α.*Z[3])^(1/(α-1))
 
