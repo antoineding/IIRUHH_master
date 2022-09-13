@@ -1,59 +1,4 @@
 #EGP Non homothetic preferences
-#Result from iteration for ϵ_luxury=1.25
-# Equm iter 39, r = 0.04199330941180121, KL ratio: 5.6733008602741295 KL diff: 0.9676616865612386%
-# 485.787303 seconds (665.62 M allocations: 383.013 GiB, 9.40% gc time, 0.04% compilation time)
-
-#Mean assets: 5.67330086027413
-#Fraction borrowing constrained: 0.016%
-#10th Percentile: 2.121005705152509
-#50th Percentile: 5.26107974444402
-#90th Percentile: 9.813009313864436
-#99th Percentile: 14.240171173390664
-
-#Result from iteration for ϵ_luxury=1.50
-#Equm iter 25, r = 0.042366220916738445, KL ratio: 5.650013544860214 KL diff: 0.9937344978794949%
-#325.193436 seconds (544.42 M allocations: 249.379 GiB, 9.36% gc time, 0.29% compilation time)
-
-#Mean assets: 5.650013544860214
-#Fraction borrowing constrained: 0.016%
-#10th Percentile: 2.0752933160968614
-#50th Percentile: 5.2065103758474915
-#90th Percentile: 9.846551467319541
-#99th Percentile: 14.493345098258855
-
-#     ϵ::Array{Float64}=[0.5, 1.0, 2.00]  # elasticity of relative demand with respect to income in luxury good sector
-
-#Equm iter 42, r = 0.04188061729019382, KL ratio: 5.6791721790912595 KL diff: 0.9384966815908502%
-#461.412200 seconds (510.29 M allocations: 405.778 GiB, 9.79% gc time, 0.18% compilation time)
-
-#Mean assets: 5.6791721790912595
-#Fraction borrowing constrained: 0.006%
-#10th Percentile: 2.286990081246028
-#50th Percentile: 5.357083932252863
-#90th Percentile: 9.525054502872843
-#99th Percentile: 13.47422784824596
-
-#ϵ::Array{Float64}=[1.0, 1.0, 1.00]  # elasticity of relative demand with respect to income in luxury good sector
-
-#Equm iter 6, r = 0.04252269768388445, KL ratio: 5.538799801170685 KL diff: -0.8127751671893502%
-#143.410526 seconds (572.72 M allocations: 74.270 GiB, 6.53% gc time, 0.73% compilation time)
-
-#Mean assets: 5.538799801170684
-#Fraction borrowing constrained: 0.02%
-#10th Percentile: 1.9127451028847449
-#50th Percentile: 5.018447397910352
-#90th Percentile: 9.894684434828415
-#99th Percentile: 14.944136663491909
-
-#Equm iter 26, r = 0.042339573379145706, KL ratio: 5.652083336829179 KL diff: 0.9992163568708134%
-#318.051213 seconds (532.95 M allocations: 258.272 GiB, 9.20% gc time, 0.35% compilation time)
-
-#Mean assets: 5.65208333682918
-#Fraction borrowing constrained: 0.016%
-#10th Percentile: 2.093506333557337
-#50th Percentile: 5.22191285337717
-#90th Percentile: 9.818237781201157
-#99th Percentile: 14.381061411027229
 
 using NLsolve, Plots, Parameters, Distributions, Random, Statistics, StatsPlots, Interpolations
 cd("/Users/antoineding/Documents/GitHub/IIRUHH_master/src")
@@ -76,7 +21,7 @@ include("lininterp1.jl")
     #Production
     α::Float64=0.4                      # Capital share
     δ::Float64=0.1                      # Capital depreciation
-    Z::Array{Float64}=[0.9, 1.0, 1.10]   # Sector productivity
+    Z::Array{Float64}=[0.9, 1.00, 1.0]   # Sector productivity
 end
 cal = Calibration()
 
@@ -146,7 +91,14 @@ maxiter_KL = 200
 tol_KL = 1.0e-3
 step_KL = 0.01
 rguess = 1/β-1-0.0001 # a bit lower than inverse of discount rate
-KLratioguess = ((rguess + δ)/α.*Z[3])^(1/(α-1))
+KLratioguess = ((rguess + δ)/α.*Z[2])^(1/(α-1))
+
+# Computation excess
+#ng=3 #number of goods
+#maxiter_excess=300
+#iter_excess=0
+#tol_excess=1e-2
+#step_excess=0.001
 
 # OPTIONS
 Display = 2
@@ -190,15 +142,48 @@ KLratio = KLratioguess
 
 iterKL = 0
 KLdiff = 1
-p=[0.5, 1.0, 2.0]
+
+#first guess price, capital and labor
+p0=[0.5, 1.0, 2.0]
+Kguess=KLratio.*Nsim
+Lguess= Nsim
 
 @time while iterKL<=maxiter_KL && abs(KLdiff)>tol_KL
+    p=p0
     iterKL = iterKL + 1
 
-    r = α.*Z[3].*KLratio^(α-1) - δ
+    #Sector weight:
+    # 50/100 primary, 35/100 normal, 15/100 luxury
+  #  ϕ_1 = 0.5
+  #  ϕ_2 = 0.35
+  #  ϕ_3 = 0.15
+
+    #Updated firms
+    r = α.*Z[2].*KLratio^(α-1) - δ
     R = 1+r
-    wage = (1-α).*Z[3].*KLratio^α
+    wage = (1-α).*Z[2].*KLratio^α
     
+
+#  if iterKL==1
+#      p=p0
+#      Y_p= ϕ_1*(r*Kguess + wage*Lguess)
+#      Y_n= ϕ_2*(r*Kguess + wage*Lguess)
+#      Y_l= ϕ_3*(r*Kguess + wage*Lguess)
+#      Prod=[Y_p Y_n Y_l]
+#  end
+#
+#  #Updates
+## if iterKL>=2
+##     K_egp=sum(asim[:,Tsim])
+##     L_egp=sum(ysim[:,Tsim])
+#
+  #     p=p_new
+  #     Y_p= ϕ_1(r.*K_egp + wage.*L_egp)
+  #     Y_n= ϕ_2(r.*K_egp + wage.*K_egp)
+  #     Y_l= ϕ_3(r.*K_egp + wage.*K_egp)
+  #     Prod=[Y_p Y_n Y_l]
+  # end
+
 
     ## initialize consumption function in first iteration only
     if iterKL==1
@@ -284,7 +269,8 @@ p=[0.5, 1.0, 2.0]
         if Display>=2
             println("Iteration no. " * string(iter), " max con fn diff is " * string(Udiff))
         end
-    end    
+    end
+
 
     ## simulate: start at assets from last interation
     if iterKL>=1
@@ -297,7 +283,7 @@ p=[0.5, 1.0, 2.0]
     ## create interpolating function
     savinterp = Array{Any}(undef,ny)
     for iy = 1:ny
-        savinterp[iy] = interpolate((Z[3].*agrid,), sav[:,iy], Gridded(Linear()))
+        savinterp[iy] = interpolate((Z[2].*agrid,), sav[:,iy], Gridded(Linear()))
     end
     
 
