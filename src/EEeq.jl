@@ -242,16 +242,6 @@ p=[0.5, 1.0, 2.0]
 
     ## loop over time periods
     for it = 1:Tsim
-        if Display>=2 && mod(it,100)==0
-            println("Simulating, time period " * string(it))
-        end
-
-        #Income realization and ranking in the distribution there is 10 rank corresponding to deciles
-        yindsim[yrand[:,it].<=ycumdist[1],it] .= 1
-        for iy = 2:ny
-            yindsim[(yrand[:,it].>ycumdist[iy-1]) .& (yrand[:,it].<=ycumdist[iy]),it] .= iy;
-        end
-        
 
         ## asset choice
         if it<Tsim

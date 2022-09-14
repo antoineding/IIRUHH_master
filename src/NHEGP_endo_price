@@ -1,6 +1,18 @@
 #EGP Non homothetic preferences
-#Equm iter  58 , r =  0.04179245507908175 , KL ratio new:  5.637648612596845 , KL ratio: 5.63220060883385  KL diff: 0.09672957590411979%
-#209.148869 seconds (750.36 M allocations: 81.556 GiB, 9.95% gc time, 2.13% compilation time)
+
+#Result from iterations
+#Iteration no. 5, max con fn diff is  0.004896319135466953
+#[0.0523410756528974, 0.27679967108153936, 3.0221727697436327] Equm iter  5 , r =  0.049472327744482264 , KL ratio new:  5.143409198691048 , KL ratio: 5.158205684798998  KL diff: -0.28685335583950033%
+#280.535735 seconds (1.54 G allocations: 56.215 GiB, 4.55% gc time, 0.99% compilation time)
+#Mean assets: 5.143409198691049
+##Total assets: 51434.09198691047
+#Total labor: 10029.160753838052
+#Mean assets: 5.143409198691049
+#Fraction borrowing constrained: 0.0%
+#10th Percentile: 4.119241167744922
+#50th Percentile: 5.143286151249014
+#90th Percentile: 6.165502837548874
+#99th Percentile: 7.001883866537899
 
 using NLsolve, Plots, Parameters, Distributions, Random, Statistics, StatsPlots, Interpolations
 cd("/Users/antoineding/Documents/GitHub/IIRUHH_master/src")
@@ -23,7 +35,7 @@ include("lininterp1.jl")
     #Production
     α::Float64=0.4                      # Capital share
     δ::Float64=0.1                      # Capital depreciation
-    Z::Array{Float64}=[0.9, 1.00, 1.20]   # Sector productivity
+    Z::Array{Float64}=[0.9, 1.00, 1.0]   # Sector productivity
 end
 cal = Calibration()
 
@@ -90,10 +102,17 @@ Tsim = 500
 
 # computation KL
 maxiter_KL = 200
-tol_KL = 1.0e-3
-step_KL = 0.01
+tol_KL = 0.005
+step_KL = 0.05
 rguess = 1/β-1-0.0001 # a bit lower than inverse of discount rate
 KLratioguess = ((rguess + δ)/α.*Z[2])^(1/(α-1))
+
+ #Computation excess
+ng=3 #number of goods
+maxiter_excess=300
+iter_excess=0
+tol_excess=1e-2
+step_excess=0.00001
 
 # OPTIONS
 Display = 2
@@ -139,18 +158,52 @@ iterKL = 0
 KLdiff = 1
 
 #first guess price, capital and labor
-p0=[0.5, 1.0, 2.0]
+p0=[0.5, 1.0, 3.0]
 Kguess=KLratio.*Nsim
 Lguess= Nsim
+C=zeros(ng)
+Excess=zeros(ng)
+pricepath=[]
+Prodpath=[]
 
+# 50/100 primary, 35/100 normal, 15/100 luxury
+ϕ_1 = 0.35
+ϕ_2 = 0.35
+ϕ_3 = 0.30
+
+p_new=zeros(ng)
 @time while iterKL<=maxiter_KL && abs(KLdiff)>tol_KL
-    p=p0
+    #Price clear
     iterKL = iterKL + 1
+    #Sector weight:
 
     #Updated firms
-    r = α.*Z[2].*KLratio^(α-1) - δ
-    R = 1+r
-    wage = (1-α).*Z[2].*KLratio^α
+    global r = α.*Z[2].*KLratio^(α-1) - δ
+    global R = 1+r
+    global wage = (1-α).*Z[2].*KLratio^α
+    
+
+    if iterKL==1
+        p=p0
+        Y_p= ϕ_1*(r*Kguess + wage*Lguess)
+        Y_n= ϕ_2*(r*Kguess + wage*Lguess)
+        Y_l= ϕ_3*(r*Kguess + wage*Lguess)
+        Prod=[Y_p Y_n Y_l]
+    end
+
+    #Updates
+    if iterKL>=2
+        ysim=ygrid[yindsim]
+        p=p_new
+        K_egp=sum(asim[:,Tsim])
+        L_egp=sum(ysim[:,Tsim])
+        Y_p= ϕ_1*(r*K_egp + wage*L_egp)
+        Y_n= ϕ_2*(r*K_egp + wage*L_egp)
+        Y_l= ϕ_3*(r*K_egp + wage*L_egp)
+        global Prod=[Y_p Y_n Y_l]
+        global Prodpath=push!(Prodpath,Prod)
+    end
+
 
     ## initialize consumption function in first iteration only
     if iterKL==1
@@ -249,11 +302,13 @@ Lguess= Nsim
     
     ## create interpolating function
     savinterp = Array{Any}(undef,ny)
+    interpol = Array{Any}(undef,ny)
+
     for iy = 1:ny
-        savinterp[iy] = interpolate((Z[2].*agrid,), sav[:,iy], Gridded(Linear()))
-        savinterp[iy] = extrapolate(savinterp[iy], Flat())   # gives edge
+        savinterp[iy] = interpolate((1.05*agrid,), sav[:,iy], Gridded(Linear())) #1.05 to rescale so that everything fall into the bound
+        
+        interpol[iy] = extrapolate(savinterp[iy], Flat())   # gives edge
     end
-    
 
     ## loop over time periods
     for it = 1:Tsim
@@ -266,8 +321,37 @@ Lguess= Nsim
 
     ysim=ygrid[yindsim]
 
+    K_egp=sum(asim[:,Tsim])
+    L_egp=sum(ysim[:,Tsim])
+
     ## assign actual labor income values
     labincsim = wage.*ysim
+
+    ## CLEAR PRICE SO THAT IT IS CONSISTENT WITH NON HOMOTHETIC DEMAND
+    for i = 1:ng
+        C[i]=sum(NHUtilityEGP(r*K_egp+wage*L_egp,p)[i])
+    end
+
+    Excess=C.-Prod'
+
+    for j =1:ng
+        while iter<=maxiter_excess && abs(Excess[j])>tol_excess
+            iter = iter + 1
+            #store price path
+            pricepath=push!(pricepath, [p[1], p[2], p[3]])
+
+            for i=1:ng
+                p[i]= p[i]+ step_excess * Excess[i]
+                C[i]= sum(NHUtilityEGP(r*K_egp+wage*L_egp, p)[i])
+            end
+    
+            Excess=C-Prod'
+        end
+    end
+
+    #consistent price vector
+    p_new=p
+    asim=asim
 
     ## mean assets and efficiency units
     global Ea = mean(asim[:,Tsim])
@@ -277,7 +361,7 @@ Lguess= Nsim
     
     KLdiff = KLrationew./KLratio - 1
     if Display>=1
-        println("Equm iter  $iterKL , r =  $r , KL ratio new:  $KLrationew , KL ratio: $KLratio  KL diff: " * string(KLdiff*100) * "%")
+        println("$p Equm iter  $iterKL , r =  $r , KL ratio new:  $KLrationew , KL ratio: $KLratio  KL diff: " * string(KLdiff*100) * "%")
     end
 
     KLratio = (1-step_KL)*KLratio + step_KL*KLrationew
@@ -285,58 +369,90 @@ Lguess= Nsim
 end
 
 ysim=ygrid[yindsim]
-# MAKE PLOTS
 
+# MAKE PLOTS
 if MakePlots==1
 ## consumption policy function
-    p1 = plot(agrid, [Ulast[:,1] Ulast[:,ny]], xlims=(0,amax), title="Consumption Policy Function", color=[:blue :red], label=["Lowest income state" "Highest income state"])
-    display(p1)
-    savefig(p1, "Figures/Utilityobtained_EGP.png") # save the most recent fig as filename_string (such as "output.png")
+p1 = plot(agrid, [Ulast[:,1] Ulast[:,ny]], xlims=(0,amax), title="Consumption Policy Function", color=[:blue :red], label=["Lowest income state" "Highest income state"])
+display(p1)
+savefig(p1, "Figures/Utilityobtained.png") # save the most recent fig as filename_string (such as "output.png")
 
-    p2 = plot(agrid, [S1[:,1] S1[:,ny] S2[:,1] S2[:,ny] S3[:,1] S3[:,ny]], 
-    xlims=(0,amax), title="Expenditure shares", color=[:blue :red], 
-    label=["Lowest income state Primary" "Highest income state primary" "Lowest income state Normal" "Highest income state Normal" "Lowest income state Luxury" "Highest income state Luxury"])
-    display(p2)
-    savefig(p2, "Figures/Share_cons_EGP.png") # save the most recent fig as filename_string (such as "output.png")
-
-
-    p3 = plot(agrid, [C1[:,ny] C2[:,ny] C3[:,ny]], 
-    xlims=(0,amax), title="Consumption share shares", color=[:blue :red :black], 
-    label=["Highest income state primary" "Highest income state Normal"  "Highest income state Luxury"])
-    display(p3)
-    savefig(p3, "Figures/cons_EGP.png") # save the most recent fig as filename_string (such as "output.png")
-
-    ## savings policy function
-    p4 = plot(agrid, [sav[:,1].-agrid[:,1] sav[:,ny].-agrid[:,1]], xlims=(0,amax), title="Savings Policy Function", color=[:blue :red], legend=false)
-    plot!(agrid, zeros(na,1), color=:black, lw=0.5)
-    display(p4)
-    savefig(p4, "Figures/saving_decision_EGP.png") # save the most recent fig as filename_string (such as "output.png")
+p2 = plot(agrid, 100.0*[S1[:,1] S1[:,ny] S2[:,1] S2[:,ny] S3[:,1] S3[:,ny]], 
+xlims=(0,amax), title="Expenditure shares", color=[:blue :red], xlabel="Wealth", ylabel="Share",
+label=["Lowest income state Primary" "Highest income state primary" "Lowest income state Normal" "Highest income state Normal" "Lowest income state Luxury" "Highest income state Luxury"])
+display(p2)
+savefig(p2, "Figures/Share_cons_GE.png") # save the most recent fig as filename_string (such as "output.png")
 
 
-    ## income distribution
-    p5 = histogram(ysim[:,Tsim], bins=[2*ygrid[1]-ygrid[2];ygrid].+(ygrid[2]-ygrid[1])/2, title="Income distribution", color=RGB(0,0.5,0.5), linecolor=:blue, legend=false)
-    display(p5)
-    savefig(p5, "Figures/income_dist_EGP.png") # save the most recent fig as filename_string (such as "output.png")
+p3 = plot(agrid, [C1[:,ny] C2[:,ny] C3[:,ny]], 
+xlims=(0,amax), title="Consumption share shares", color=[:blue :red :black], 
+label=["Highest income state primary" "Highest income state Normal"  "Highest income state Luxury"])
+display(p3)
+savefig(p3, "Figures/cons_GE.png") # save the most recent fig as filename_string (such as "output.png")
 
-    ## asset distribution
-    p6 = histogram(asim[:,Tsim], nbins=100, title="Asset distribution", color=RGB(.7,.7,.7), linecolor=:black, legend=false)
-    display(p6)
-    savefig(p6, "Figures/Asset_dist_EGP.png") # save the most recent fig as filename_string (such as "output.png")
+## savings policy function
+p4 = plot(agrid, [sav[:,1].-agrid[:,1] sav[:,ny].-agrid[:,1]], xlims=(0,amax), title="Savings Policy Function", color=[:blue :red], legend=false)
+plot!(agrid, zeros(na,1), color=:black, lw=0.5)
+display(p4)
+savefig(p4, "Figures/saving_decision.png") # save the most recent fig as filename_string (such as "output.png")
 
-    ## convergence check
-    p7 = plot(1:Tsim, mean(asim,dims=1)', ylims=(0,2*Ea), title="Mean Asset Convergence", xlabel="Time Period", color=:black, lw=1.5, legend=false)
-    display(p7)
 
-    ## asset distribution statistics
-    aysim = asim[:,Tsim]./mean(ysim[:,Tsim])
-    println("Mean assets: " * string(mean(aysim)))
-    println("Total assets: " * string(cumsum(aysim)[end]))
-    println("Total labor: " * string(cumsum(ysim[:,end])[end]))
-    println("Mean assets: " * string(mean(aysim)))
+## income distribution
+p5 = histogram(ysim[:,Tsim], bins=[2*ygrid[1]-ygrid[2];ygrid].+(ygrid[2]-ygrid[1])/2, title="Income distribution", color=RGB(0,0.5,0.5), linecolor=:blue, legend=false)
+display(p5)
+savefig(p5, "Figures/income_dist.png") # save the most recent fig as filename_string (such as "output.png")
 
-    println("Fraction borrowing constrained: " * string(sum(aysim.==borrow_lim)/Nsim * 100) * '%')
-    println("10th Percentile: " * string(quantile(aysim,.1)))
-    println("50th Percentile: " * string(quantile(aysim,.5)))
-    println("90th Percentile: " * string(quantile(aysim,.9)))
-    println("99th Percentile: " * string(quantile(aysim,.99)))
+## asset distribution
+p6 = histogram(asim[:,Tsim], nbins=100, title="Asset distribution", color=RGB(.7,.7,.7), linecolor=:black, legend=false)
+display(p6)
+savefig(p6, "Figures/Asset_dist.png") # save the most recent fig as filename_string (such as "output.png")
+
+## convergence check
+p7 = plot(1:Tsim, mean(asim,dims=1)', ylims=(0,2*Ea), title="Mean Asset Convergence", xlabel="Time Period", color=:black, lw=1.5, legend=false)
+display(p7)
+
+## asset distribution statistics
+aysim = asim[:,Tsim]./mean(ysim[:,Tsim])
+println("Mean assets: " * string(mean(aysim)))
+println("Total assets: " * string(cumsum(aysim)[end]))
+println("Total labor: " * string(cumsum(ysim[:,end])[end]))
+println("Mean assets: " * string(mean(aysim)))
+
+println("Fraction borrowing constrained: " * string(sum(aysim.==borrow_lim)/Nsim * 100) * '%')
+println("10th Percentile: " * string(quantile(aysim,.1)))
+println("50th Percentile: " * string(quantile(aysim,.5)))
+println("90th Percentile: " * string(quantile(aysim,.9)))
+println("99th Percentile: " * string(quantile(aysim,.99)))
+
+
+#Plot price path
+pricep=pricepath
+p_p=[]
+p_n=[]
+p_l=[]
+for i=1:length(pricep)
+    p_p=push!(p_p, pricep[i][1])
+    p_n=push!(p_n, pricep[i][2])
+    p_l=push!(p_l, pricep[i][3])
+end
+
+pprice=plot([p_p p_n p_l], title="GE with $ng goods, 10000 agents at p=[0.5, 1.0, 3.0]", label=["Primary" "Normal" "Luxury"], xlabel="Iteration to equilibrium", ylabel="Price")
+display(pprice)
+savefig(pprice, "Figures/pricepath_GE.png") # save the most recent fig as filename_string (such as "output.png")
+
+
+#Plot production path
+Prodp=Prodpath[1:4]
+p_p=[]
+p_n=[]
+p_l=[]
+for i=1:length(Prodp)
+    p_p=push!(p_p, Prodp[i][1])
+    p_n=push!(p_n, Prodp[i][2])
+    p_l=push!(p_l, Prodp[i][3])
+end
+pprod=plot([p_p p_n p_l], title="Production with $ng goods, $Nsim agents at p=[0.5, 1.5, 3.0]", label=["Primary" "Normal" "Luxury"], xlabel="Iteration to equilibrium", ylabel="Price")
+display(pprod)
+savefig(pprod, "Figures/Prodpath.png") # save the most recent fig as filename_string (such as "output.png")
+
 end
