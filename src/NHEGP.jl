@@ -1,6 +1,16 @@
 #EGP Non homothetic preferences
+#EGP
 #Equm iter  58 , r =  0.04179245507908175 , KL ratio new:  5.637648612596845 , KL ratio: 5.63220060883385  KL diff: 0.09672957590411979%
-#209.148869 seconds (750.36 M allocations: 81.556 GiB, 9.95% gc time, 2.13% compilation time)
+#181.810161 seconds (742.60 M allocations: 81.140 GiB, 7.38% gc time, 0.51% compilation time)
+#Mean assets: 5.637648612596844
+#Total assets: 56376.48612596845
+#Total labor: 10029.160753838052
+#Mean assets: 5.637648612596844
+#Fraction borrowing constrained: 0.04%
+#10th Percentile: 1.962969437643963
+#50th Percentile: 5.164911119689187
+#90th Percentile: 9.96729777752071
+#99th Percentile: 14.335911091105434
 
 using NLsolve, Plots, Parameters, Distributions, Random, Statistics, StatsPlots, Interpolations
 cd("/Users/antoineding/Documents/GitHub/IIRUHH_master/src")

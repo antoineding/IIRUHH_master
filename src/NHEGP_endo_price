@@ -1,18 +1,17 @@
 #EGP Non homothetic preferences
 
-#Result from iterations
-#Iteration no. 5, max con fn diff is  0.004896319135466953
-#[0.0523410756528974, 0.27679967108153936, 3.0221727697436327] Equm iter  5 , r =  0.049472327744482264 , KL ratio new:  5.143409198691048 , KL ratio: 5.158205684798998  KL diff: -0.28685335583950033%
-#280.535735 seconds (1.54 G allocations: 56.215 GiB, 4.55% gc time, 0.99% compilation time)
-#Mean assets: 5.143409198691049
-##Total assets: 51434.09198691047
+#Results from iteration
+#[0.050223177661668464, 0.2672169231245807, 2.9503152252094367] Equm iter  24 , r =  0.04309081821939531 , KL ratio new:  5.5281366938476735 , KL ratio: 5.547283656303127  KL diff: -0.3451592462501374%
+#30400.461643 seconds (15.53 G allocations: 535.446 GiB, 21.60% gc time, 0.01% compilation time)
+#Mean assets: 5.5281366938476735
+#Total assets: 55281.36693847674
 #Total labor: 10029.160753838052
-#Mean assets: 5.143409198691049
+#Mean assets: 5.5281366938476735
 #Fraction borrowing constrained: 0.0%
-#10th Percentile: 4.119241167744922
-#50th Percentile: 5.143286151249014
-#90th Percentile: 6.165502837548874
-#99th Percentile: 7.001883866537899
+#10th Percentile: 3.280540276501636
+#50th Percentile: 5.507564474249882
+#90th Percentile: 7.7882407184936655
+#99th Percentile: 9.646526505071469
 
 using NLsolve, Plots, Parameters, Distributions, Random, Statistics, StatsPlots, Interpolations
 cd("/Users/antoineding/Documents/GitHub/IIRUHH_master/src")
@@ -96,13 +95,13 @@ agrid_par = 0.5 # 1 for linear, 0 for L-shaped
 
 ## computation
 max_iter = 200
-tol_iter = 5.0e-3
+tol_iter = 1.0e-3
 Nsim = 10000
 Tsim = 500
 
 # computation KL
 maxiter_KL = 200
-tol_KL = 0.005
+tol_KL = 0.01
 step_KL = 0.05
 rguess = 1/β-1-0.0001 # a bit lower than inverse of discount rate
 KLratioguess = ((rguess + δ)/α.*Z[2])^(1/(α-1))
@@ -305,7 +304,7 @@ p_new=zeros(ng)
     interpol = Array{Any}(undef,ny)
 
     for iy = 1:ny
-        savinterp[iy] = interpolate((1.05*agrid,), sav[:,iy], Gridded(Linear())) #1.05 to rescale so that everything fall into the bound
+        savinterp[iy] = interpolate((1.01*agrid,), sav[:,iy], Gridded(Linear())) #1.05 to rescale so that everything fall into the bound
         
         interpol[iy] = extrapolate(savinterp[iy], Flat())   # gives edge
     end

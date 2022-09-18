@@ -1,13 +1,13 @@
 #Euler equation Non homothetic preferences
-#Equm iter 35, r = 0.04206797050255448, KL ratio new: 5.668515486144455, KL ratio: 5.614007969600302 KL diff: 0.9709198283883724%
-#659.516409 seconds (449.39 M allocations: 345.638 GiB, 11.08% gc time, 0.21% compilation time)
-
-#Mean assets: 5.668515486144454
-#Fraction borrowing constrained: 0.02%
-#10th Percentile: 2.0595983353675344
-#50th Percentile: 5.217634875766818
-#90th Percentile: 9.911458417164877
-#99th Percentile: 14.566907522321564
+#EE Equation
+#Equm iter 11, r = 0.041823840423476505, KL ratio new: 5.62472384000676, KL ratio: 5.630123436718476 KL diff: -0.09590547653894888\%
+#139.061631 seconds (377.04 M allocations: 74.893 GiB, 8.09\% gc time, 0.84\% compilation time)
+#Mean assets: 5.62472384000676
+#Fraction borrowing constrained: 0.036000000000000004\%
+#10th Percentile: 1.9191068770885877
+#50th Percentile: 5.172179798601983
+#90th Percentile: 9.956860008701538
+#99th Percentile: 14.510228336287929
 
 using NLsolve, Plots, Parameters, Distributions, Random, Statistics, StatsPlots, Interpolations
 cd("/Users/antoineding/Documents/GitHub/IIRUHH_master/src")
@@ -91,15 +91,15 @@ agrid_par = 0.5 # 1 for linear, 0 for L-shaped
 
 ## computation
 max_iter = 200
-tol_iter = 1.0e-2
+tol_iter = 5.0e-3
 Nsim = 50000
 Tsim = 500
 
 # computation KL
 maxiter_KL = 70
-tol_KL = 1.0e-2
+tol_KL = 1.0e-3
 step_KL = 0.01
-rguess = 1/β-1-0.001 # a bit lower than inverse of discount rate
+rguess = 1/β-1-0.0001 # a bit lower than inverse of discount rate
 KLratioguess = ((rguess + δ)/α)^(1/(α-1))
 
 # OPTIONS
@@ -130,6 +130,14 @@ Random.seed!(2022)
 # Random value for revenue for Nsim people Tsim period
 yrand = rand(Nsim,Tsim)
 yindsim = zeros(Int,Nsim,Tsim)
+
+for it = 1:Tsim
+    #Income realization and ranking in the distribution there is 10 rank corresponding to deciles
+    yindsim[yrand[:,it].<=ycumdist[1],it] .= 1
+    for iy = 2:ny
+        yindsim[(yrand[:,it].>ycumdist[iy-1]) .& (yrand[:,it].<=ycumdist[iy]),it] .= iy;
+    end
+end
 
 # ITERATE OVER KL RATIO
 KLratio = KLratioguess
