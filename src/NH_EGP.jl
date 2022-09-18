@@ -1,5 +1,7 @@
 #EGP Non homothetic preferences
 #EGP
+
+#BEFORE SHOCK
 #Equm iter  58 , r =  0.04179245507908175 , KL ratio new:  5.637648612596845 , KL ratio: 5.63220060883385  KL diff: 0.09672957590411979%
 #181.810161 seconds (742.60 M allocations: 81.140 GiB, 7.38% gc time, 0.51% compilation time)
 #Mean assets: 5.637648612596844
@@ -11,6 +13,19 @@
 #50th Percentile: 5.164911119689187
 #90th Percentile: 9.96729777752071
 #99th Percentile: 14.335911091105434
+
+#POST SHOCK
+#Equm iter  91 , r =  0.04153646520021015 , KL ratio new:  6.133861305325042 , KL ratio: 6.127757574335207  KL diff: 0.09960790575984646%
+#367.075040 seconds (1.41 G allocations: 135.060 GiB, 9.03% gc time, 0.34% compilation time)
+#Mean assets: 6.133861305325042
+#Total assets: 61338.61305325042
+#Total labor: 10029.160753838052
+#Mean assets: 6.133861305325042
+###Fraction borrowing constrained: 0.04%
+#10th Percentile: 2.1819423467922543
+#50th Percentile: 5.604769190346959
+#90th Percentile: 10.819832645248837
+#99th Percentile: 15.61411847245358
 
 using NLsolve, Plots, Parameters, Distributions, Random, Statistics, StatsPlots, Interpolations
 cd("/Users/antoineding/Documents/GitHub/IIRUHH_master/src")
@@ -33,7 +48,7 @@ include("lininterp1.jl")
     #Production
     α::Float64=0.4                      # Capital share
     δ::Float64=0.1                      # Capital depreciation
-    Z::Array{Float64}=[0.9, 1.00, 1.20]   # Sector productivity
+    Z::Array{Float64}=[0.9, 1.05, 1.20]   # Sector productivity
 end
 cal = Calibration()
 
@@ -260,7 +275,7 @@ Lguess= Nsim
     ## create interpolating function
     savinterp = Array{Any}(undef,ny)
     for iy = 1:ny
-        savinterp[iy] = interpolate((Z[2].*agrid,), sav[:,iy], Gridded(Linear()))
+        savinterp[iy] = interpolate((agrid,), sav[:,iy], Gridded(Linear()))
         savinterp[iy] = extrapolate(savinterp[iy], Flat())   # gives edge
     end
     
@@ -301,37 +316,37 @@ if MakePlots==1
 ## consumption policy function
     p1 = plot(agrid, [Ulast[:,1] Ulast[:,ny]], xlims=(0,amax), title="Consumption Policy Function", color=[:blue :red], label=["Lowest income state" "Highest income state"])
     display(p1)
-    savefig(p1, "Figures/Utilityobtained_EGP.png") # save the most recent fig as filename_string (such as "output.png")
+    savefig(p1, "Figures/Utilityobtained_EGP_shock.png") # save the most recent fig as filename_string (such as "output.png")
 
     p2 = plot(agrid, [S1[:,1] S1[:,ny] S2[:,1] S2[:,ny] S3[:,1] S3[:,ny]], 
     xlims=(0,amax), title="Expenditure shares", color=[:blue :red], 
     label=["Lowest income state Primary" "Highest income state primary" "Lowest income state Normal" "Highest income state Normal" "Lowest income state Luxury" "Highest income state Luxury"])
     display(p2)
-    savefig(p2, "Figures/Share_cons_EGP.png") # save the most recent fig as filename_string (such as "output.png")
+    savefig(p2, "Figures/Share_cons_EGP_shock.png") # save the most recent fig as filename_string (such as "output.png")
 
 
     p3 = plot(agrid, [C1[:,ny] C2[:,ny] C3[:,ny]], 
     xlims=(0,amax), title="Consumption share shares", color=[:blue :red :black], 
     label=["Highest income state primary" "Highest income state Normal"  "Highest income state Luxury"])
     display(p3)
-    savefig(p3, "Figures/cons_EGP.png") # save the most recent fig as filename_string (such as "output.png")
+    savefig(p3, "Figures/cons_EGP_shock.png") # save the most recent fig as filename_string (such as "output.png")
 
     ## savings policy function
     p4 = plot(agrid, [sav[:,1].-agrid[:,1] sav[:,ny].-agrid[:,1]], xlims=(0,amax), title="Savings Policy Function", color=[:blue :red], legend=false)
     plot!(agrid, zeros(na,1), color=:black, lw=0.5)
     display(p4)
-    savefig(p4, "Figures/saving_decision_EGP.png") # save the most recent fig as filename_string (such as "output.png")
+    savefig(p4, "Figures/saving_decision_EGP_shock.png") # save the most recent fig as filename_string (such as "output.png")
 
 
     ## income distribution
     p5 = histogram(ysim[:,Tsim], bins=[2*ygrid[1]-ygrid[2];ygrid].+(ygrid[2]-ygrid[1])/2, title="Income distribution", color=RGB(0,0.5,0.5), linecolor=:blue, legend=false)
     display(p5)
-    savefig(p5, "Figures/income_dist_EGP.png") # save the most recent fig as filename_string (such as "output.png")
+    savefig(p5, "Figures/income_dist_EGP_shock.png") # save the most recent fig as filename_string (such as "output.png")
 
     ## asset distribution
     p6 = histogram(asim[:,Tsim], nbins=100, title="Asset distribution", color=RGB(.7,.7,.7), linecolor=:black, legend=false)
     display(p6)
-    savefig(p6, "Figures/Asset_dist_EGP.png") # save the most recent fig as filename_string (such as "output.png")
+    savefig(p6, "Figures/Asset_dist_EGP_shock.png") # save the most recent fig as filename_string (such as "output.png")
 
     ## convergence check
     p7 = plot(1:Tsim, mean(asim,dims=1)', ylims=(0,2*Ea), title="Mean Asset Convergence", xlabel="Time Period", color=:black, lw=1.5, legend=false)
