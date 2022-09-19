@@ -1,4 +1,4 @@
-#EGP Non homothetic preferences
+#EGP Non homothetic preferences with endogenous price level
 
 #Results from iteration
 #[0.050223177661668464, 0.2672169231245807, 2.9503152252094367] Equm iter  24 , r =  0.04309081821939531 , KL ratio new:  5.5281366938476735 , KL ratio: 5.547283656303127  KL diff: -0.3451592462501374%

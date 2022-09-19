@@ -1,4 +1,4 @@
-#EGP Non homothetic preferences
+#Endogenous grid point method Non homothetic preferences
 #EGP
 
 #BEFORE SHOCK
