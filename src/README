@@ -1,0 +1,36 @@
+This file describes src code file for Inflation inequality Redistribution Under Household Heterogeneity project written by Antoine DING
+
+.jl file: 
+
+* Ben_Moll_code_egp_IID_aiyagari
+Computes Aiyagari model with iid income risk via endogenous grid point, found on Benjamain Moll website
+
+* discrete_nomal
+Compute normal distribution for iid income risk
+
+* linterp1
+Interpolate saving value for intertemporal problem
+
+* NH_EE
+Compute partial equilibrium with non homothetic preferences with Euler equation interation
+
+* NH_EGP
+Compute partial equilibrium with non homothetic preferences with Endogenous grid point method interation before shock
+
+* NH_EGP_shock
+Compute partial equilibrium with non homothetic preferences with Endogenous grid point method  interation after shock
+
+* NH_EGP_endo_price
+Compute general equilibrium with non homothetic preferences withEndogenous grid point method interation with prices consistency
+
+
+.ipynb file:
+
+* Endow_treatingexcess
+Endowment model served to compute supply shock on primary goods with details
+
+* Income_treatingexcess
+Decentralized competitive equilibrum model served to compute supply shock on primary goods with details. Capital and labor level were given. Not the best so please refer to NH_EE, NH_EGP, NH_EGP_shock and NH_EGP_endo_price.
+
+
+Antoine DING
